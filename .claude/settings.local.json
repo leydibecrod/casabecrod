@@ -6,7 +6,10 @@
       "Bash(powershell -Command:*)",
       "Bash(echo:*)",
       "Bash(node:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)"
     ]
   }
 }
