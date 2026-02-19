@@ -98,6 +98,32 @@
     font-weight: 400;
   }
 
+  /* ===== TOGGLE BUTTON ===== */
+  .panel-toggle {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    z-index: 101;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(20px);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+  }
+
+  .panel-toggle:hover { background: rgba(255,255,255,0.08); }
+
+  .panel.open ~ .panel-toggle { right: 324px; }
+
   /* ===== SIDE PANEL ===== */
   .panel {
     position: fixed;
@@ -114,6 +140,13 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     display: flex;
     flex-direction: column;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .panel:not(.open) {
+    transform: translateX(320px);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .panel::-webkit-scrollbar { width: 4px; }
@@ -399,7 +432,8 @@
 </div>
 
 <!-- ===== SIDE PANEL ===== -->
-<div class="panel" id="panel">
+<button class="panel-toggle" id="panelToggle" title="Mostrar/ocultar panel">&#9776;</button>
+<div class="panel open" id="panel">
   <!-- SOLAR INFO (shown when selected) -->
   <div id="solarInfo" style="display:none;">
     <div class="panel-section">
@@ -454,9 +488,10 @@
 
 <!-- ===== KEYBOARD HINTS ===== -->
 <div class="hints">
-  <div class="hint"><kbd>W</kbd><kbd>S</kbd> Zoom</div>
-  <div class="hint"><kbd>A</kbd><kbd>D</kbd> Rotar</div>
-  <div class="hint">🖱️ Arrastrar para orbitar</div>
+  <div class="hint">🖱️ Izq: Orbitar</div>
+  <div class="hint">🖱️ Der: Panear</div>
+  <div class="hint">🖱️ Scroll: Zoom</div>
+  <div class="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Navegar</div>
 </div>
 
 <!-- ===== THREE.JS ===== -->
@@ -506,7 +541,7 @@ const DATA = {
       "id": "Mz32",
       "corners": [
         { "east": 215573.037, "north": 9367205.374 },
-        { "east": 215651.2847, "north": 9367174.7025 },
+        { "east": 215661.2083, "north": 9367170.2383 },
         { "east": 215632.2513, "north": 9367096.0716 },
         { "east": 215543.6415, "north": 9367130.8227 }
       ]
@@ -517,7 +552,7 @@ const DATA = {
         { "east": 215678.1653, "north": 9367213.6696 },
         { "east": 215707.0415, "north": 9367288.0708 },
         { "east": 215619.1299, "north": 9367322.2722 },
-        { "east": 215590.2851, "north": 9367247.6291 }
+        { "east": 215589.9031, "north": 9367248.1490 }
       ]
     },
     {
@@ -758,23 +793,22 @@ const DATA = {
     }
   ],
   "calles": [
-    { "name": "Jr. Moyobamba", "width_approx_m": 14.5,
-      "center_utm": { "east": 215692.2909, "north": 9367230.4503 } },
-    { "name": "Jr. Rioja", "width_approx_m": 27,
-      "center_utm": { "east": 215557.37, "north": 9367172.89 } },
-    { "name": "Av. Marginal - F. Belaunde Terry", "width_approx_m": 20,
-      "center_utm": { "east": 215587.946, "north": 9367101.447 } }
+    { "name": "Av. Marginal - F. Belaunde Terry", "width_approx_m": 40,
+      "center_utm": { "east": 215625.0, "north": 9367210.0 } },
+    { "name": "Jr. Rioja", "width_approx_m": 16,
+      "center_utm": { "east": 215565.0, "north": 9367240.0 } },
+    { "name": "Jr. Moyobamba", "width_approx_m": 14,
+      "center_utm": { "east": 215699.0, "north": 9367250.0 } }
   ]
 };
 
 // ============================================================
 // 2) COORDINATE NORMALIZATION
 // ============================================================
-// Collect ALL coordinates to find center
+// Center on manzanas + solares only (perimeter is too large and skews the center)
 const allCoords = [];
 DATA.solares.forEach(s => s.vertices.forEach(v => allCoords.push(v)));
 DATA.manzanas.forEach(m => m.corners.forEach(c => allCoords.push(c)));
-DATA.perimetro_general.vertices.forEach(v => allCoords.push(v));
 
 const minE = Math.min(...allCoords.map(c => c.east));
 const maxE = Math.max(...allCoords.map(c => c.east));
@@ -784,7 +818,9 @@ const centerE = (minE + maxE) / 2;
 const centerN = (minN + maxN) / 2;
 
 function toLocal(east, north) {
-  return { x: east - centerE, z: -(north - centerN) };
+  // X = east (derecha), Z = -north (norte queda "hacia arriba" en pantalla)
+  // La cámara mirará desde el sur para que norte quede arriba
+  return { x: east - centerE, z: centerN - north };
 }
 
 // ============================================================
@@ -795,7 +831,7 @@ scene.background = new THREE.Color(0x0a0f1a);
 scene.fog = new THREE.FogExp2(0x0a0f1a, 0.0008);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 2000);
-camera.position.set(0, 250, 200);
+camera.position.set(0, 200, 150);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -822,6 +858,9 @@ controls.dampingFactor = 0.08;
 controls.minDistance = 30;
 controls.maxDistance = 600;
 controls.maxPolarAngle = Math.PI / 2.1;
+controls.enablePan = true;
+controls.screenSpacePanning = true;
+controls.panSpeed = 1.5;
 controls.target.set(0, 0, 0);
 
 // ============================================================
@@ -849,7 +888,7 @@ scene.add(hemiLight);
 // ============================================================
 // 5) GROUND PLANE
 // ============================================================
-const groundSize = 800;
+const groundSize = 400;
 const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
 const groundMat = new THREE.MeshStandardMaterial({
   color: 0x1a3a1a,
@@ -863,7 +902,7 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // Subtle grid on ground
-const gridHelper = new THREE.GridHelper(groundSize, 80, 0x1a4a1a, 0x1a4a1a);
+const gridHelper = new THREE.GridHelper(groundSize, 40, 0x1a4a1a, 0x1a4a1a);
 gridHelper.position.y = -0.05;
 gridHelper.material.opacity = 0.2;
 gridHelper.material.transparent = true;
@@ -922,45 +961,74 @@ DATA.manzanas.forEach(mz => {
 });
 
 // ============================================================
-// 8) STREETS (simple extruded shapes between manzanas)
+// 8) STREETS (polygons between manzanas)
 // ============================================================
-// We'll create street surfaces based on the alignment data and manzana edges
-// Simple approach: create grey planes at known street locations
+// Streets are defined as the space between adjacent manzana edges
 
-function createStreetPlane(cx, cz, width, length, angle) {
-  const geo = new THREE.PlaneGeometry(width, length);
+function createStreetPolygon(vertices, color = 0x3a3a3a) {
+  // vertices: array of {east, north} defining the street polygon (4 corners)
+  const pts = vertices.map(v => toLocal(v.east, v.north));
+  const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+  const cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+  const local = pts.map(p => ({ x: p.x - cx, z: p.z - cz }));
+  const n = local.length;
+
+  const positions = [];
+  for (let i = 0; i < n; i++) positions.push(local[i].x, 0.05, local[i].z);
+
+  // Triangulate as fan from first vertex
+  const indices = [];
+  for (let i = 1; i < n - 1; i++) indices.push(0, i, i + 1);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x3a3a3a,
+    color: color,
     roughness: 0.9,
-    metalness: 0.05
+    metalness: 0.05,
+    side: THREE.DoubleSide
   });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.rotation.z = angle;
-  mesh.position.set(cx, 0.05, cz);
+  mesh.position.set(cx, 0, cz);
   mesh.receiveShadow = true;
   scene.add(mesh);
-
   return mesh;
 }
 
-// Jr. Rioja - between Mz32 and Mz30 (NE-SW diagonal)
-{
-  const p = toLocal(215557.37, 9367172.89);
-  createStreetPlane(p.x, p.z, 27, 120, -0.38);
-}
+// Av. Marginal - F. Belaunde Terry - between Mz32 (north) and Mz33 (south)
+createStreetPolygon([
+  { east: 215573.037,  north: 9367205.374 },   // Mz32 NW
+  { east: 215661.2083, north: 9367170.2383 },  // Mz32 NE
+  { east: 215678.1653, north: 9367213.6696 },  // Mz33 SE
+  { east: 215589.9031, north: 9367248.1490 }   // Mz33 SW
+]);
 
-// Jr. Moyobamba - between Mz33 and Mz35
-{
-  const p = toLocal(215692.2909, 9367230.4503);
-  createStreetPlane(p.x, p.z, 14.5, 100, -0.38);
-}
+// Jr. Rioja - between Mz30 (east) and Mz32 (west)
+createStreetPolygon([
+  { east: 215556.968,  north: 9367208.8459 },  // Mz30 NE
+  { east: 215528.1671, north: 9367134.2974 },  // Mz30 SE
+  { east: 215543.6415, north: 9367130.8227 },  // Mz32 SW
+  { east: 215573.037,  north: 9367205.374 }    // Mz32 NW
+]);
 
-// Av. Marginal
-{
-  const p = toLocal(215587.946, 9367101.447);
-  createStreetPlane(p.x, p.z, 20, 300, -0.38);
-}
+// Jr. Rioja (cont.) - between Mz29 (east) and Mz33 (west)
+createStreetPolygon([
+  { east: 215574.5831, north: 9367258.5379 },  // Mz29 SE
+  { east: 215605.0226, north: 9367332.3556 },  // Mz29 NE
+  { east: 215619.1299, north: 9367322.2722 },  // Mz33 NW
+  { east: 215589.9031, north: 9367248.1490 }   // Mz33 SW
+]);
+
+// Jr. Moyobamba - east of Mz33
+createStreetPolygon([
+  { east: 215678.1653, north: 9367213.6696 },  // Mz33 SE
+  { east: 215707.0415, north: 9367288.0708 },  // Mz33 NE
+  { east: 215721.0415, north: 9367284.0708 },  // Mz35 NW (approx +14m)
+  { east: 215692.1653, north: 9367209.6696 }   // Mz35 SW (approx +14m)
+]);
 
 // Street labels
 DATA.calles.forEach(calle => {
@@ -989,28 +1057,48 @@ function createSolarMesh(solar, index) {
   const cx = pts2D.reduce((s, p) => s + p.x, 0) / pts2D.length;
   const cz = pts2D.reduce((s, p) => s + p.z, 0) / pts2D.length;
 
-  // Create Shape (local to centroid for better extrusion)
-  const shape = new THREE.Shape();
-  shape.moveTo(pts2D[0].x - cx, pts2D[0].z - cz);
-  for (let i = 1; i < pts2D.length; i++) {
-    shape.lineTo(pts2D[i].x - cx, pts2D[i].z - cz);
-  }
-  shape.closePath();
-
+  // Build geometry directly in XZ plane using BufferGeometry
+  // to avoid Shape+rotateX orientation issues
   const height = solar.default_height_m || 4;
 
-  const extrudeSettings = {
-    depth: height,
-    bevelEnabled: true,
-    bevelThickness: 0.15,
-    bevelSize: 0.1,
-    bevelSegments: 1
-  };
+  // Local coords relative to centroid
+  const localPts = pts2D.map(p => ({ x: p.x - cx, z: p.z - cz }));
+  const n = localPts.length;
 
-  const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  // Build vertices: bottom ring + top ring
+  const positions = [];
+  const indices = [];
 
-  // Rotate so extrusion goes up (Y axis)
-  geometry.rotateX(-Math.PI / 2);
+  // Bottom face vertices (y=0), Top face vertices (y=height)
+  for (let i = 0; i < n; i++) {
+    positions.push(localPts[i].x, 0, localPts[i].z);           // bottom
+  }
+  for (let i = 0; i < n; i++) {
+    positions.push(localPts[i].x, height, localPts[i].z);      // top
+  }
+
+  // Top face triangles (fan from vertex n)
+  for (let i = 1; i < n - 1; i++) {
+    indices.push(n, n + i, n + i + 1);
+  }
+
+  // Bottom face triangles (fan from vertex 0, reversed winding)
+  for (let i = 1; i < n - 1; i++) {
+    indices.push(0, i + 1, i);
+  }
+
+  // Side faces (quads as 2 triangles each)
+  for (let i = 0; i < n; i++) {
+    const i2 = (i + 1) % n;
+    const b1 = i, b2 = i2, t1 = i + n, t2 = i2 + n;
+    indices.push(b1, b2, t2);
+    indices.push(b1, t2, t1);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
 
   const color = new THREE.Color(solar.color);
   const material = new THREE.MeshStandardMaterial({
@@ -1036,7 +1124,7 @@ function createSolarMesh(solar, index) {
     type: solar.type,
     centroid: { x: cx, z: cz },
     vertices2D: pts2D,
-    shapeRef: shape
+    localPts: localPts
   };
 
   scene.add(mesh);
@@ -1207,16 +1295,23 @@ heightSliderEl.addEventListener('input', (e) => {
   const ud = mesh.userData;
 
   // Recreate geometry with new height
-  const extrudeSettings = {
-    depth: newHeight,
-    bevelEnabled: true,
-    bevelThickness: 0.15,
-    bevelSize: 0.1,
-    bevelSegments: 1
-  };
-
-  const newGeo = new THREE.ExtrudeGeometry(ud.shapeRef, extrudeSettings);
-  newGeo.rotateX(-Math.PI / 2);
+  const lp = ud.localPts;
+  const nn = lp.length;
+  const pos = [];
+  const idx = [];
+  for (let i = 0; i < nn; i++) pos.push(lp[i].x, 0, lp[i].z);
+  for (let i = 0; i < nn; i++) pos.push(lp[i].x, newHeight, lp[i].z);
+  for (let i = 1; i < nn - 1; i++) idx.push(nn, nn + i, nn + i + 1);
+  for (let i = 1; i < nn - 1; i++) idx.push(0, i + 1, i);
+  for (let i = 0; i < nn; i++) {
+    const i2 = (i + 1) % nn;
+    idx.push(i, i2, i2 + nn);
+    idx.push(i, i2 + nn, i + nn);
+  }
+  const newGeo = new THREE.BufferGeometry();
+  newGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  newGeo.setIndex(idx);
+  newGeo.computeVertexNormals();
 
   mesh.geometry.dispose();
   mesh.geometry = newGeo;
@@ -1282,29 +1377,32 @@ window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
 function handleKeys() {
-  const speed = 1.5;
+  const panAmount = 2.5;
+
+  // Get camera's horizontal right and forward vectors
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  forward.y = 0;
+  forward.normalize();
+
+  const right = new THREE.Vector3();
+  right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
   if (keys['w']) {
-    camera.position.lerp(controls.target, 0.02);
+    camera.position.add(forward.clone().multiplyScalar(panAmount));
+    controls.target.add(forward.clone().multiplyScalar(panAmount));
   }
   if (keys['s']) {
-    const dir = camera.position.clone().sub(controls.target).normalize();
-    camera.position.add(dir.multiplyScalar(speed));
+    camera.position.add(forward.clone().multiplyScalar(-panAmount));
+    controls.target.add(forward.clone().multiplyScalar(-panAmount));
   }
   if (keys['a']) {
-    const angle = 0.015;
-    const pos = camera.position.clone().sub(controls.target);
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    const nx = pos.x * cos - pos.z * sin;
-    const nz = pos.x * sin + pos.z * cos;
-    camera.position.set(nx + controls.target.x, camera.position.y, nz + controls.target.z);
+    camera.position.add(right.clone().multiplyScalar(-panAmount));
+    controls.target.add(right.clone().multiplyScalar(-panAmount));
   }
   if (keys['d']) {
-    const angle = -0.015;
-    const pos = camera.position.clone().sub(controls.target);
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    const nx = pos.x * cos - pos.z * sin;
-    const nz = pos.x * sin + pos.z * cos;
-    camera.position.set(nx + controls.target.x, camera.position.y, nz + controls.target.z);
+    camera.position.add(right.clone().multiplyScalar(panAmount));
+    controls.target.add(right.clone().multiplyScalar(panAmount));
   }
 }
 
@@ -1334,9 +1432,21 @@ animate();
 // ============================================================
 // 19) INITIAL CAMERA POSITION
 // ============================================================
-camera.position.set(50, 200, 220);
-controls.target.set(30, 0, -20);
+// Cámara desde el sur mirando al norte (coincide con orientación del mapa)
+camera.position.set(0, 300, 250);
+controls.target.set(0, 0, 0);
 controls.update();
+
+// ============================================================
+// 20) PANEL TOGGLE
+// ============================================================
+const panelToggleEl = document.getElementById('panelToggle');
+const panelElement = document.getElementById('panel');
+
+panelToggleEl.addEventListener('click', () => {
+  panelElement.classList.toggle('open');
+  panelToggleEl.textContent = panelElement.classList.contains('open') ? '\u2715' : '\u2630';
+});
 
 console.log('✅ Barrio Dinamarca 3D loaded —', DATA.solares.length, 'solares');
 </script>
