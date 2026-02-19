@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zonificación Aguas Claras</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; }
+    #map { width: 100%; height: 100vh; }
+
+    .info-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      max-width: 320px;
+      max-height: 90vh;
+      overflow-y: auto;
+      font-size: 13px;
+    }
+    .info-panel h3 { margin-bottom: 8px; font-size: 15px; }
+    .info-panel p { margin-bottom: 6px; color: #555; }
+
+    .measure-btn {
+      position: absolute;
+      top: 10px;
+      left: 60px;
+      z-index: 1000;
+      background: white;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 4px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .measure-btn:hover { background: #f0f0f0; }
+    .measure-btn.active { background: #2196F3; color: white; }
+
+    .clear-btn {
+      position: absolute;
+      top: 10px;
+      left: 220px;
+      z-index: 1000;
+      background: white;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-radius: 4px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .vertex-label {
+      background: none;
+      border: none;
+      font-weight: bold;
+      font-size: 12px;
+      color: #d32f2f;
+      text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white;
+    }
+
+    .distance-label {
+      background: rgba(33,150,243,0.9);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      border: none;
+      white-space: nowrap;
+    }
+
+    .measurement-label {
+      background: rgba(255,87,34,0.9);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      border: none;
+      white-space: nowrap;
+    }
+
+    .street-label {
+      background: rgba(0,0,0,0.7);
+      color: #FFD600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      font-style: italic;
+      border: 1px solid #FFD600;
+      white-space: nowrap;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .street-label-av {
+      color: #FF9800;
+      border-color: #FF9800;
+      font-size: 12px;
+    }
+
+    .lot-label {
+      background: none;
+      border: none;
+      font-weight: bold;
+      font-size: 11px;
+      color: #fff;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.8), -1px -1px 3px rgba(0,0,0,0.8);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .legend {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #ddd;
+    }
+    .legend h4 { font-size: 13px; margin-bottom: 6px; }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .legend-item:hover { opacity: 0.7; }
+    .legend-color {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.2);
+      flex-shrink: 0;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+    th, td { padding: 4px 6px; text-align: left; border-bottom: 1px solid #eee; }
+    th { font-weight: 600; background: #f5f5f5; }
+    .total-row { font-weight: bold; background: #e3f2fd; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <button class="measure-btn" id="measureBtn" onclick="toggleMeasure()">Medir distancia</button>
+  <button class="clear-btn" id="clearBtn" onclick="clearMeasurements()">Limpiar mediciones</button>
+  <div class="info-panel" id="infoPanel">
+    <h3>Aguas Claras - Datos Tecnicos</h3>
+    <p>Fuente: SUNARP | Datum: WGS84 UTM 18S</p>
+    <p id="areaInfo"></p>
+    <p id="perimeterInfo"></p>
+    <table id="vertexTable">
+      <thead><tr><th>V</th><th>Este</th><th>Norte</th><th>Dist.</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="legend" id="legend">
+      <h4>Solares - Barrio Dinamarca</h4>
+    </div>
+    <hr style="margin: 10px 0;">
+    <p style="font-size: 11px; color: #888;">Click en un lote o vertice para ver coordenadas. Usa "Medir distancia" para medir entre 2 puntos del mapa.</p>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // UTM Zone 18S to Lat/Lng conversion (WGS84)
+    function utmToLatLng(easting, northing, zone, southern) {
+      const a = 6378137;
+      const f = 1 / 298.257223563;
+      const k0 = 0.9996;
+      const e = Math.sqrt(2 * f - f * f);
+      const e2 = e * e / (1 - e * e);
+      const n = (a - a * (1 - f)) / (a + a * (1 - f));
+
+      const x = easting - 500000;
+      const y = southern ? northing - 10000000 : northing;
+
+      const M = y / k0;
+      const mu = M / (a * (1 - e * e / 4 - 3 * Math.pow(e, 4) / 64 - 5 * Math.pow(e, 6) / 256));
+
+      const e1 = (1 - Math.sqrt(1 - e * e)) / (1 + Math.sqrt(1 - e * e));
+      const phi1 = mu
+        + (3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32) * Math.sin(2 * mu)
+        + (21 * e1 * e1 / 16 - 55 * Math.pow(e1, 4) / 32) * Math.sin(4 * mu)
+        + (151 * Math.pow(e1, 3) / 96) * Math.sin(6 * mu)
+        + (1097 * Math.pow(e1, 4) / 512) * Math.sin(8 * mu);
+
+      const sinPhi = Math.sin(phi1);
+      const cosPhi = Math.cos(phi1);
+      const tanPhi = Math.tan(phi1);
+
+      const N1 = a / Math.sqrt(1 - e * e * sinPhi * sinPhi);
+      const T1 = tanPhi * tanPhi;
+      const C1 = e2 * cosPhi * cosPhi;
+      const R1 = a * (1 - e * e) / Math.pow(1 - e * e * sinPhi * sinPhi, 1.5);
+      const D = x / (N1 * k0);
+
+      const lat = phi1
+        - (N1 * tanPhi / R1) * (
+          D * D / 2
+          - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * e2) * Math.pow(D, 4) / 24
+          + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * e2 - 3 * C1 * C1) * Math.pow(D, 6) / 720
+        );
+
+      const lng0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+      const lng = lng0 + (
+        D
+        - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6
+        + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * e2 + 24 * T1 * T1) * Math.pow(D, 5) / 120
+      ) / cosPhi;
+
+      return { lat: lat * 180 / Math.PI, lng: lng * 180 / Math.PI };
+    }
+
+    // Raw data from SUNARP CSV
+    const vertices = [
+      { id: 1, side: '1-2', dist: 236.68, east: 214845.481, north: 9367557.683 },
+      { id: 2, side: '2-3', dist: 708.62, east: 214932.4938, north: 9367777.79 },
+      { id: 3, side: '3-4', dist: 50.94, east: 215590.091, north: 9367513.762 },
+      { id: 4, side: '4-5', dist: 189.73, east: 215571.2759, north: 9367466.427 },
+      { id: 5, side: '5-6', dist: 99.69, east: 215747.5837, north: 9367396.338 },
+      { id: 6, side: '6-7', dist: 39.32, east: 215709.9431, north: 9367304.031 },
+      { id: 7, side: '7-8', dist: 239.76, east: 215745.6907, north: 9367287.653 },
+      { id: 8, side: '8-9', dist: 136.34, east: 215656.3094, north: 9367065.176 },
+      { id: 9, side: '9-10', dist: 94.41, east: 215530.03, north: 9367116.587 },
+      { id: 10, side: '10-11', dist: 94.86, east: 215494.7471, north: 9367029.015 },
+      { id: 11, side: '11-12', dist: 94.41, east: 215406.5934, north: 9367064.059 },
+      { id: 12, side: '12-13', dist: 297.39, east: 215441.8762, north: 9367151.631 },
+      { id: 13, side: '13-14', dist: 56.21, east: 215165.5017, north: 9367261.434 },
+      { id: 14, side: '14-15', dist: 109.87, east: 215186.6735, north: 9367313.504 },
+      { id: 15, side: '15-16', dist: 39.21, east: 215084.2284, north: 9367353.209 },
+      { id: 16, side: '16-17', dist: 183.85, east: 215046.1339, north: 9367362.489 },
+      { id: 17, side: '17-1', dist: 100.16, east: 214931.3317, north: 9367506.091 },
+    ];
+
+    // Convert UTM to LatLng
+    const latLngVertices = vertices.map(v => {
+      const ll = utmToLatLng(v.east, v.north, 18, true);
+      return { ...v, lat: ll.lat, lng: ll.lng };
+    });
+
+    // Initialize map
+    const map = L.map('map', { zoomControl: true });
+
+    // Satellite + labels layer (hybrid)
+    const satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Esri World Imagery', maxNativeZoom: 19, maxZoom: 23 }
+    );
+    const labels = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      { maxNativeZoom: 19, maxZoom: 23 }
+    );
+    const streets = L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { attribution: '&copy; OpenStreetMap', maxNativeZoom: 19, maxZoom: 23 }
+    );
+
+    const hybridGroup = L.layerGroup([satellite, labels]);
+    hybridGroup.addTo(map);
+
+    L.control.layers({
+      'Satelite': hybridGroup,
+      'Calles': streets
+    }).addTo(map);
+
+    // Draw polygon
+    const polygonCoords = latLngVertices.map(v => [v.lat, v.lng]);
+    const polygon = L.polygon(polygonCoords, {
+      color: '#FF5722',
+      weight: 3,
+      fillColor: '#FF5722',
+      fillOpacity: 0.15,
+      dashArray: '5, 5'
+    }).addTo(map);
+
+    // Fit map to polygon
+    map.fitBounds(polygon.getBounds().pad(0.1));
+
+    // Add vertex markers
+    latLngVertices.forEach((v, i) => {
+      const marker = L.circleMarker([v.lat, v.lng], {
+        radius: 6,
+        color: '#d32f2f',
+        fillColor: '#fff',
+        fillOpacity: 1,
+        weight: 2
+      }).addTo(map);
+
+      // Vertex number label
+      L.marker([v.lat, v.lng], {
+        icon: L.divIcon({
+          className: 'vertex-label',
+          html: `V${v.id}`,
+          iconSize: [20, 14],
+          iconAnchor: [-6, 7]
+        })
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <b>Vertice ${v.id}</b><br>
+        Este: ${v.east.toFixed(3)}<br>
+        Norte: ${v.north.toFixed(3)}<br>
+        Lat: ${v.lat.toFixed(6)}<br>
+        Lng: ${v.lng.toFixed(6)}<br>
+        Dist al siguiente: ${v.dist} m
+      `);
+    });
+
+    // Add side distance labels
+    latLngVertices.forEach((v, i) => {
+      const next = latLngVertices[(i + 1) % latLngVertices.length];
+      const midLat = (v.lat + next.lat) / 2;
+      const midLng = (v.lng + next.lng) / 2;
+
+      L.marker([midLat, midLng], {
+        icon: L.divIcon({
+          className: 'distance-label',
+          html: `${v.dist} m`,
+          iconSize: [60, 16],
+          iconAnchor: [30, 8]
+        })
+      }).addTo(map);
+    });
+
+    // Calculate area using Shoelace formula on UTM coords (meters)
+    let area = 0;
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      area += vertices[i].east * vertices[j].north;
+      area -= vertices[j].east * vertices[i].north;
+    }
+    area = Math.abs(area) / 2;
+
+    const perimeter = vertices.reduce((sum, v) => sum + v.dist, 0);
+
+    document.getElementById('areaInfo').textContent = `Area: ${(area / 10000).toFixed(2)} ha (${area.toFixed(0)} m²)`;
+    document.getElementById('perimeterInfo').textContent = `Perimetro: ${perimeter.toFixed(2)} m`;
+
+    // Populate table
+    const tbody = document.querySelector('#vertexTable tbody');
+    vertices.forEach(v => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${v.id}</td><td>${v.east.toFixed(1)}</td><td>${v.north.toFixed(1)}</td><td>${v.dist} m</td>`;
+      tbody.appendChild(tr);
+    });
+    const totalTr = document.createElement('tr');
+    totalTr.className = 'total-row';
+    totalTr.innerHTML = `<td colspan="3">Total perimetro</td><td>${perimeter.toFixed(2)} m</td>`;
+    tbody.appendChild(totalTr);
+
+    // --- Solares Barrio Dinamarca ---
+    const solares = [
+      {
+        name: 'Mz32 - Valerio Santa Cruz',
+        color: '#4CAF50',
+        vertices: [
+          { east: 215590.311, north: 9367198.3636 },
+          { east: 215579.725, north: 9367172.3284 },
+          { east: 215563.0456, north: 9367179.3414 },
+          { east: 215573.037, north: 9367205.374 },
+        ],
+        sides: [28.11, 18.09, 27.88, 18.64]
+      },
+      {
+        name: 'Mz32 - Guillermo Leon',
+        color: '#66BB6A',
+        vertices: [
+          { east: 215604.01, north: 9367193.0352 },
+          { east: 215593.647, north: 9367167.0011 },
+          { east: 215579.724, north: 9367172.5498 },
+          { east: 215590.0874, north: 9367198.5102 },
+        ],
+        sides: [28.02, 14.99, 27.95, 14.96]
+      },
+      {
+        name: 'Mz32 - Sr. Onorato Becerra',
+        color: '#2196F3',
+        vertices: [
+          { east: 215647.7892, north: 9367175.5857 },
+          { east: 215637.2033, north: 9367149.5505 },
+          { east: 215615.1635, north: 9367158.6069 },
+          { east: 215625.4522, north: 9367184.6407 },
+        ],
+        sides: [28.11, 23.83, 27.99, 24.10]
+      },
+      {
+        name: 'Mz33 - Alsides Briones',
+        color: '#9C27B0',
+        vertices: [
+          { east: 215682.1595, north: 9367267.8781 },
+          { east: 215692.151, north: 9367293.9106 },
+          { east: 215707.0415, north: 9367288.0708 },
+          { east: 215697.05, north: 9367262.0383 },
+        ],
+        sides: [27.88, 15.99, 27.88, 15.99]
+      },
+      {
+        name: 'Mz33 - Pablo Hinostroza',
+        color: '#FF9800',
+        vertices: [
+          { east: 215665.0622, north: 9367218.7053 },
+          { east: 215675.1277, north: 9367244.812 },
+          { east: 215688.2308, north: 9367239.7763 },
+          { east: 215678.1653, north: 9367213.6696 },
+        ],
+        sides: [27.98, 14.04, 27.98, 14.04]
+      },
+      {
+        name: 'Mz35 - Brijido Ramirez',
+        color: '#00BCD4',
+        vertices: [
+          { east: 215691.9285, north: 9367210.6303 },
+          { east: 215701.9199, north: 9367236.6628 },
+          { east: 215715.6186, north: 9367231.4083 },
+          { east: 215705.6271, north: 9367205.3758 },
+        ],
+        sides: [27.88, 14.67, 27.88, 14.67]
+      },
+      {
+        name: 'Mz35 - Casa Comunal Dinamarca',
+        color: '#80CBC4',
+        vertices: [
+          { east: 215705.7758, north: 9367205.3764 },
+          { east: 215715.6173, north: 9367231.7036 },
+          { east: 215729.7619, north: 9367226.4511 },
+          { east: 215719.9204, north: 9367200.1239 },
+        ],
+        sides: [28.11, 15.09, 28.11, 15.09]
+      },
+      {
+        name: 'Mz32 - Hildebran Becerra',
+        color: '#1565C0',
+        vertices: [
+          { east: 215628.6798, north: 9367127.659 },
+          { east: 215618.0938, north: 9367101.6239 },
+          { east: 215603.7979, north: 9367107.4663 },
+          { east: 215613.1948, north: 9367133.4962 },
+        ],
+        sides: [28.11, 15.44, 27.67, 16.55]
+      },
+      {
+        name: 'Mz36 - Yovani Cayao, Jorge Lopez',
+        color: '#F44336',
+        vertices: [
+          { east: 215680.2483, north: 9367163.3274 },
+          { east: 215670.2569, north: 9367137.295 },
+          { east: 215655.9636, north: 9367142.5468 },
+          { east: 215665.9551, north: 9367168.5793 },
+        ],
+        sides: [27.88, 15.23, 27.88, 15.23]
+      },
+      {
+        name: 'Mz36 - Sara Togas',
+        color: '#D84315',
+        vertices: [
+          { east: 215655.9636, north: 9367142.5468 },
+          { east: 215683.9582, north: 9367131.4498 },
+          { east: 215679.8464, north: 9367120.2095 },
+          { east: 215651.8518, north: 9367131.3064 },
+        ],
+        sides: [30.11, 11.97, 30.11, 11.97]
+      },
+      {
+        name: 'Mz30 - Jesus Becerra',
+        color: '#388E3C',
+        vertices: [
+          { east: 215532.0887, north: 9367188.0625 },
+          { east: 215542.0775, north: 9367214.6857 },
+          { east: 215556.968, north: 9367208.8459 },
+          { east: 215546.9766, north: 9367182.8134 },
+        ],
+        sides: [28.44, 15.99, 27.88, 15.79]
+      },
+      {
+        name: 'Mz29 - Abulio Arce',
+        color: '#7B1FA2',
+        vertices: [
+          { east: 215574.5831, north: 9367258.5379 },
+          { east: 215559.6927, north: 9367264.3777 },
+          { east: 215570.2787, north: 9367290.413 },
+          { east: 215585.1718, north: 9367283.9825 },
+        ],
+        sides: [15.99, 28.11, 16.22, 27.56]
+      },
+      {
+        name: 'Mz33 - Opuesta Alcides',
+        color: '#AB47BC',
+        vertices: [
+          { east: 215622.0031, north: 9367291.2347 },
+          { east: 215631.9946, north: 9367317.2673 },
+          { east: 215646.885, north: 9367311.4275 },
+          { east: 215636.8936, north: 9367285.3949 },
+        ],
+        sides: [27.88, 15.99, 27.88, 15.99]
+      },
+      {
+        name: 'Mz33 - Frente Abilio',
+        color: '#5C6BC0',
+        vertices: [
+          { east: 215603.4921, north: 9367242.4247 },
+          { east: 215613.4828, north: 9367268.6049 },
+          { east: 215625.6925, north: 9367263.9344 },
+          { east: 215615.5531, north: 9367237.7535 },
+        ],
+        sides: [28.02, 13.07, 28.08, 12.93]
+      },
+      {
+        name: 'Mz30 - Sra. Yola (Karen)',
+        color: '#26A69A',
+        vertices: [
+          { east: 215513.2792, north: 9367139.5465 },
+          { east: 215523.268, north: 9367166.1697 },
+          { east: 215538.1584, north: 9367160.3299 },
+          { east: 215528.1671, north: 9367134.2974 },
+        ],
+        sides: [28.44, 15.99, 27.88, 15.79]
+      },
+      {
+        name: 'Mz30 - Rupa Rustic',
+        color: '#00897B',
+        vertices: [
+          { east: 215472.5268, north: 9367211.4216 },
+          { east: 215482.5182, north: 9367237.4542 },
+          { east: 215497.4087, north: 9367231.6144 },
+          { east: 215487.4173, north: 9367205.5819 },
+        ],
+        sides: [27.88, 15.99, 27.88, 15.99]
+      },
+      {
+        name: 'Mz30 - Esquina Sur Oeste Mz30',
+        color: '#00695C',
+        vertices: [
+          { east: 215453.7173, north: 9367162.9055 },
+          { east: 215463.7087, north: 9367188.9381 },
+          { east: 215478.5992, north: 9367183.0983 },
+          { east: 215468.6078, north: 9367157.0658 },
+        ],
+        sides: [27.88, 15.99, 27.88, 15.99]
+      },
+      {
+        name: 'Mz29 - Pintado Huaman',
+        color: '#6A1B9A',
+        vertices: [
+          { east: 215515.0185, north: 9367282.4877 },
+          { east: 215500.72, north: 9367288.9208 },
+          { east: 215511.306, north: 9367314.9561 },
+          { east: 215526.1991, north: 9367308.5256 },
+        ],
+        sides: [15.68, 28.11, 16.22, 28.34]
+      },
+      {
+        name: 'Mz29 - Esquina Nor Oeste Mz29',
+        color: '#4A148C',
+        vertices: [
+          { east: 215543.9663, north: 9367357.4801 },
+          { east: 215536.3194, north: 9367338.9886 },
+          { east: 215523.3632, north: 9367344.394 },
+          { east: 215531.0101, north: 9367362.8856 },
+        ],
+        sides: [20.01, 14.04, 20.01, 14.04]
+      },
+      {
+        name: 'Mz29 - Op. Abilio Arce',
+        color: '#9C27B0',
+        vertices: [
+          { east: 215605.0226, north: 9367332.3556 },
+          { east: 215594.2872, north: 9367306.4674 },
+          { east: 215579.5441, north: 9367312.6032 },
+          { east: 215590.1308, north: 9367338.4907 },
+        ],
+        sides: [28.03, 15.97, 27.97, 16.11]
+      },
+      {
+        name: 'Mz33 - Esquina SW',
+        color: '#F44336',
+        vertices: [
+          { east: 215588.0044, north: 9367248.8524 },
+          { east: 215597.6979, north: 9367275.0313 },
+          { east: 215609.9062, north: 9367270.6561 },
+          { east: 215600.2134, north: 9367244.3296 },
+        ],
+        sides: [27.92, 12.97, 28.05, 13.02]
+      },
+      {
+        name: 'Mz32 - Moises Marin',
+        color: '#795548',
+        vertices: [
+          { east: 215554.2275, north: 9367156.8579 },
+          { east: 215569.1179, north: 9367151.0181 },
+          { east: 215558.532, north: 9367124.983 },
+          { east: 215543.6415, north: 9367130.8227 },
+        ],
+        sides: [15.99, 28.11, 15.99, 28.11]
+      },
+      {
+        name: 'Wilder Coronel',
+        color: '#FFB300',
+        vertices: [
+          { east: 215467.6224, north: 9367244.4752 },
+          { east: 215457.631, north: 9367218.4427 },
+          { east: 215442.7405, north: 9367224.2824 },
+          { east: 215452.7319, north: 9367250.315 },
+        ],
+        sides: [27.88, 15.99, 27.88, 15.99]
+      },
+      {
+        name: 'Esquina Sur Este Mz24',
+        color: '#FF8F00',
+        vertices: [
+          { east: 215448.5156, north: 9367195.9578 },
+          { east: 215438.2257, north: 9367170.2192 },
+          { east: 215423.3352, north: 9367176.0589 },
+          { east: 215433.9211, north: 9367202.0942 },
+        ],
+        sides: [27.72, 15.99, 28.11, 15.83]
+      },
+    ];
+
+    const legendDiv = document.getElementById('legend');
+
+    solares.forEach(solar => {
+      // Convert vertices
+      const coords = solar.vertices.map(v => {
+        const ll = utmToLatLng(v.east, v.north, 18, true);
+        return [ll.lat, ll.lng];
+      });
+
+      // Calculate area (Shoelace on UTM)
+      let solarArea = 0;
+      for (let i = 0; i < solar.vertices.length; i++) {
+        const j = (i + 1) % solar.vertices.length;
+        solarArea += solar.vertices[i].east * solar.vertices[j].north;
+        solarArea -= solar.vertices[j].east * solar.vertices[i].north;
+      }
+      solarArea = Math.abs(solarArea) / 2;
+      const solarPerimeter = solar.sides.reduce((s, d) => s + d, 0);
+
+      // Draw polygon
+      const lotPoly = L.polygon(coords, {
+        color: solar.color,
+        weight: 3,
+        fillColor: solar.color,
+        fillOpacity: 0.35
+      }).addTo(map);
+
+      // Popup
+      let popupHtml = `<b>${solar.name}</b><br>`;
+      popupHtml += `Area: ${solarArea.toFixed(1)} m²<br>`;
+      popupHtml += `Perimetro: ${solarPerimeter.toFixed(2)} m<br>`;
+      popupHtml += `<small>Lados: ${solar.sides.map(s => s + 'm').join(', ')}</small>`;
+      lotPoly.bindPopup(popupHtml);
+
+      // Center label
+      const centerLat = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+      const centerLng = coords.reduce((s, c) => s + c[1], 0) / coords.length;
+      L.marker([centerLat, centerLng], {
+        icon: L.divIcon({
+          className: 'lot-label',
+          html: solar.name.split(' - ')[1] || solar.name,
+          iconSize: [80, 14],
+          iconAnchor: [40, 7]
+        })
+      }).addTo(map);
+
+      // Vertex markers for lot
+      coords.forEach((c, i) => {
+        L.circleMarker(c, {
+          radius: 4,
+          color: solar.color,
+          fillColor: '#fff',
+          fillOpacity: 1,
+          weight: 2
+        }).addTo(map).bindPopup(`
+          <b>${solar.name} - V${i + 1}</b><br>
+          Este: ${solar.vertices[i].east.toFixed(3)}<br>
+          Norte: ${solar.vertices[i].north.toFixed(3)}
+        `);
+      });
+
+      // Legend entry
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-color" style="background:${solar.color}"></span>${solar.name} (${solarArea.toFixed(0)} m²)`;
+      item.onclick = () => map.fitBounds(lotPoly.getBounds().pad(0.5));
+      legendDiv.appendChild(item);
+    });
+
+    // --- Mz32 perimeter reference line ---
+    // NE and SE extended to yellow line (Pablo V4 -> Alcides V4)
+    const mz32NW = { east: 215573.037, north: 9367205.374 };       // Valerio SC V4
+    const mz32OnoV1 = { east: 215647.7892, north: 9367175.5857 };  // Onorato V1 (direction for north side)
+    const mz32HildV2 = { east: 215618.0938, north: 9367101.6239 }; // Hildebran V2 (direction for south side)
+    const mz32SW = { east: 215543.6415, north: 9367130.8227 };     // Moises V4
+    const pabloV4Line = { east: 215678.1653, north: 9367213.6696 };
+    const alcidesV4Line = { east: 215697.05, north: 9367262.0383 };
+
+    const mz32NE = lineIntersection(pabloV4Line, alcidesV4Line, mz32NW, mz32OnoV1);
+    const mz32SE = lineIntersection(pabloV4Line, alcidesV4Line, mz32SW, mz32HildV2);
+
+    const mz32Dist = (a, b) => Math.sqrt((a.east - b.east) ** 2 + (a.north - b.north) ** 2);
+    const mz32Corners = [mz32NW, mz32NE, mz32SE, mz32SW];
+    const mz32SidesN = mz32Dist(mz32NW, mz32NE).toFixed(2);
+    const mz32SidesE = mz32Dist(mz32NE, mz32SE).toFixed(2);
+    const mz32SidesS = mz32Dist(mz32SE, mz32SW).toFixed(2);
+    const mz32SidesW = mz32Dist(mz32SW, mz32NW).toFixed(2);
+    const mz32Perim = (parseFloat(mz32SidesN) + parseFloat(mz32SidesE) + parseFloat(mz32SidesS) + parseFloat(mz32SidesW)).toFixed(2);
+
+    const mz32CornersLL = mz32Corners.map(c => utmToLatLng(c.east, c.north, 18, true));
+    const mz32Poly = L.polygon(
+      mz32CornersLL.map(c => [c.lat, c.lng]),
+      { color: '#FFFFFF', weight: 2, fillColor: 'transparent', fillOpacity: 0, dashArray: '8, 6', opacity: 0.8 }
+    ).addTo(map);
+
+    const mz32Labels = [`N: ${mz32SidesN}m`, `E: ${mz32SidesE}m`, `S: ${mz32SidesS}m`, `W: ${mz32SidesW}m`];
+    mz32CornersLL.forEach((c, i) => {
+      const next = mz32CornersLL[(i + 1) % 4];
+      const mid = { lat: (c.lat + next.lat) / 2, lng: (c.lng + next.lng) / 2 };
+      L.marker([mid.lat, mid.lng], {
+        icon: L.divIcon({
+          className: 'distance-label',
+          html: `Mz32 ${mz32Labels[i]}`,
+          iconSize: [110, 16],
+          iconAnchor: [55, 8]
+        })
+      }).addTo(map);
+    });
+
+    // Mark NE and SE projected corners
+    const mz32NELL = utmToLatLng(mz32NE.east, mz32NE.north, 18, true);
+    const mz32SELL = utmToLatLng(mz32SE.east, mz32SE.north, 18, true);
+    L.circleMarker([mz32NELL.lat, mz32NELL.lng], {
+      radius: 6, color: '#FFFFFF', fillColor: '#FFFFFF', fillOpacity: 1, weight: 2
+    }).addTo(map).bindPopup(
+      `<b>Mz32 - Esquina NE (proyectada)</b><br>Interseccion: linea Pablo V4-Alcides V4 con linea norte Mz32<br>UTM: ${mz32NE.east.toFixed(4)}E, ${mz32NE.north.toFixed(4)}N`
+    );
+    L.circleMarker([mz32SELL.lat, mz32SELL.lng], {
+      radius: 6, color: '#FFFFFF', fillColor: '#FFFFFF', fillOpacity: 1, weight: 2
+    }).addTo(map).bindPopup(
+      `<b>Mz32 - Esquina SE (proyectada)</b><br>Interseccion: linea Pablo V4-Alcides V4 con linea sur Mz32<br>UTM: ${mz32SE.east.toFixed(4)}E, ${mz32SE.north.toFixed(4)}N`
+    );
+
+    mz32Poly.bindPopup(`<b>Mz32 - Perimetro</b><br>Esquinas: Valerio SC V4, Proy. NE, Proy. SE, Moises V4<br>N: ${mz32SidesN}m | E: ${mz32SidesE}m | S: ${mz32SidesS}m | W: ${mz32SidesW}m<br>Perimetro: ${mz32Perim} m`);
+
+    // --- Mz33 perimeter reference line ---
+    // Line intersection helper
+    function lineIntersection(p1, p2, p3, p4) {
+      const x1 = p1.east, y1 = p1.north, x2 = p2.east, y2 = p2.north;
+      const x3 = p3.east, y3 = p3.north, x4 = p4.east, y4 = p4.north;
+      const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+      if (Math.abs(denom) < 1e-10) return null;
+      const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+      return { east: x1 + t * (x2 - x1), north: y1 + t * (y2 - y1) };
+    }
+
+    // SW = intersection of orange east line (Valerio-Moises = Jr. Rioja) with Esquina SW V1-V4 line
+    // NW = intersection of orange east line (Valerio-Moises = Jr. Rioja) with Alcides V3 -> Opuesta V2 line
+    const esqSwV1 = { east: 215588.0044, north: 9367248.8524 };
+    const esqSwV4 = { east: 215600.2134, north: 9367244.3296 };
+    const valerioV4Mz33 = { east: 215573.037, north: 9367205.374 };
+    const moisesV4Mz33 = { east: 215543.6415, north: 9367130.8227 };
+    const mz33SE = { east: 215678.1653, north: 9367213.6696 };   // Pablo V4
+    const mz33NE = { east: 215707.0415, north: 9367288.0708 };   // Alcides V3
+    const mz33OpAlcV2 = { east: 215631.9946, north: 9367317.2673 }; // Opuesta Alcides V2
+    const mz33SW = lineIntersection(valerioV4Mz33, moisesV4Mz33, esqSwV1, esqSwV4);
+    const mz33NW = lineIntersection(valerioV4Mz33, moisesV4Mz33, mz33NE, mz33OpAlcV2);
+
+    const mz33Dist = (a, b) => Math.sqrt((a.east - b.east) ** 2 + (a.north - b.north) ** 2);
+    const mz33Corners = [mz33SE, mz33NE, mz33NW, mz33SW];
+    const mz33SidesSE = mz33Dist(mz33SE, mz33NE).toFixed(2);
+    const mz33SidesNE = mz33Dist(mz33NE, mz33NW).toFixed(2);
+    const mz33SidesNW = mz33Dist(mz33NW, mz33SW).toFixed(2);
+    const mz33SidesSW = mz33Dist(mz33SW, mz33SE).toFixed(2);
+    const mz33Perim = (parseFloat(mz33SidesSE) + parseFloat(mz33SidesNE) + parseFloat(mz33SidesNW) + parseFloat(mz33SidesSW)).toFixed(2);
+
+    const mz33CornersLL = mz33Corners.map(c => utmToLatLng(c.east, c.north, 18, true));
+    const mz33Poly = L.polygon(
+      mz33CornersLL.map(c => [c.lat, c.lng]),
+      { color: '#FFEB3B', weight: 2, fillColor: 'transparent', fillOpacity: 0, dashArray: '8, 6', opacity: 0.8 }
+    ).addTo(map);
+
+    const mz33Labels = [`SE: ${mz33SidesSE}m`, `NE: ${mz33SidesNE}m`, `NW: ${mz33SidesNW}m`, `SW: ${mz33SidesSW}m`];
+    mz33CornersLL.forEach((c, i) => {
+      const next = mz33CornersLL[(i + 1) % 4];
+      const mid = { lat: (c.lat + next.lat) / 2, lng: (c.lng + next.lng) / 2 };
+      L.marker([mid.lat, mid.lng], {
+        icon: L.divIcon({
+          className: 'distance-label',
+          html: `Mz33 ${mz33Labels[i]}`,
+          iconSize: [110, 16],
+          iconAnchor: [55, 8]
+        })
+      }).addTo(map);
+    });
+
+    // Mark NW projected corner
+    const mz33NWLL = utmToLatLng(mz33NW.east, mz33NW.north, 18, true);
+    L.circleMarker([mz33NWLL.lat, mz33NWLL.lng], {
+      radius: 6, color: '#FFEB3B', fillColor: '#FFEB3B', fillOpacity: 1, weight: 2
+    }).addTo(map).bindPopup(
+      `<b>Mz33 - Esquina NW (proyectada)</b><br>` +
+      `Interseccion: Jr. Rioja (Valerio-Moises) con linea Alcides V3 - Opuesta V2<br>` +
+      `UTM: ${mz33NW.east.toFixed(4)}E, ${mz33NW.north.toFixed(4)}N`
+    );
+
+    mz33Poly.bindPopup(`<b>Mz33 - Perimetro</b><br>Esquinas: Pablo V4, Alcides V3, Proy. NW, Esquina SW V1<br>SE: ${mz33SidesSE}m | NE: ${mz33SidesNE}m | NW: ${mz33SidesNW}m | SW: ${mz33SidesSW}m<br>Perimetro: ${mz33Perim} m`);
+
+    // --- Mz30 perimeter reference line ---
+    const mz30Corners = [
+      { east: 215482.5182, north: 9367237.4542 },   // NW - Rupa Rustic V2
+      { east: 215556.968, north: 9367208.8459 },     // NE - Jesus Becerra V3
+      { east: 215528.1671, north: 9367134.2974 },   // SE - Sra. Yola (Karen) V4
+      { east: 215453.7173, north: 9367162.9055 },   // SW - Esquina SW Mz30 V1
+    ];
+    const mz30CornersLL = mz30Corners.map(c => utmToLatLng(c.east, c.north, 18, true));
+    const mz30Poly = L.polygon(
+      mz30CornersLL.map(c => [c.lat, c.lng]),
+      { color: '#00E676', weight: 2, fillColor: 'transparent', fillOpacity: 0, dashArray: '8, 6', opacity: 0.8 }
+    ).addTo(map);
+
+    const mz30Labels = ['N: 79.76m', 'E: 79.92m', 'S: 79.76m', 'W: 79.92m'];
+    mz30CornersLL.forEach((c, i) => {
+      const next = mz30CornersLL[(i + 1) % 4];
+      const mid = { lat: (c.lat + next.lat) / 2, lng: (c.lng + next.lng) / 2 };
+      L.marker([mid.lat, mid.lng], {
+        icon: L.divIcon({
+          className: 'distance-label',
+          html: `Mz30 ${mz30Labels[i]}`,
+          iconSize: [90, 16],
+          iconAnchor: [45, 8]
+        })
+      }).addTo(map);
+    });
+
+    mz30Poly.bindPopup('<b>Mz30 - Perimetro referencial</b><br>Esquinas: Rupa Rustic V2, Jesus Becerra V3, Sra. Yola (Karen) V4, Esquina SW Mz30 V1<br>Perimetro: 319.35 m');
+
+    // --- Mz29 perimeter reference line ---
+    const mz29Corners = [
+      { east: 215531.0101, north: 9367362.8856 },   // NW - Esquina NW Mz29 V4
+      { east: 215605.0226, north: 9367332.3556 },   // NE - Op Abilio V1
+      { east: 215574.5831, north: 9367258.5379 },   // SE - Abulio V1
+      { east: 215500.72, north: 9367288.9208 },      // SW - Pintado Huaman V2
+    ];
+    const mz29CornersLL = mz29Corners.map(c => utmToLatLng(c.east, c.north, 18, true));
+    const mz29Poly = L.polygon(
+      mz29CornersLL.map(c => [c.lat, c.lng]),
+      { color: '#CE93D8', weight: 2, fillColor: 'transparent', fillOpacity: 0, dashArray: '8, 6', opacity: 0.8 }
+    ).addTo(map);
+
+    const mz29Labels = ['N: 80.06m', 'E: 79.85m', 'S: 79.87m', 'W: 79.93m'];
+    mz29CornersLL.forEach((c, i) => {
+      const next = mz29CornersLL[(i + 1) % 4];
+      const mid = { lat: (c.lat + next.lat) / 2, lng: (c.lng + next.lng) / 2 };
+      L.marker([mid.lat, mid.lng], {
+        icon: L.divIcon({
+          className: 'distance-label',
+          html: `Mz29 ${mz29Labels[i]}`,
+          iconSize: [90, 16],
+          iconAnchor: [45, 8]
+        })
+      }).addTo(map);
+    });
+
+    mz29Poly.bindPopup('<b>Mz29 - Perimetro referencial</b><br>Esquinas: Esquina NW Mz29 V4, Op. Abilio V1, Abulio V1, Pintado Huaman V2<br>Perimetro: 319.70 m');
+
+    // --- Lado Mz24: Wilder Coronel V1 -> Esquina SE Mz24 V2 ---
+    const wilderV1 = { east: 215467.6224, north: 9367244.4752 };
+    const esqSEMz24V2 = { east: 215438.2257, north: 9367170.2192 };
+    const ladoMz24Dist = Math.sqrt((wilderV1.east - esqSEMz24V2.east) ** 2 + (wilderV1.north - esqSEMz24V2.north) ** 2).toFixed(2);
+    const wilderV1LL = utmToLatLng(wilderV1.east, wilderV1.north, 18, true);
+    const esqSEMz24V2LL = utmToLatLng(esqSEMz24V2.east, esqSEMz24V2.north, 18, true);
+    L.polyline(
+      [[wilderV1LL.lat, wilderV1LL.lng], [esqSEMz24V2LL.lat, esqSEMz24V2LL.lng]],
+      { color: '#FFFFFF', weight: 2, dashArray: '8, 6', opacity: 0.8 }
+    ).addTo(map).bindPopup(`<b>Lado este Mz24</b><br>Wilder Coronel V1 → Esquina SE Mz24 V2<br>Distancia: ${ladoMz24Dist}m`);
+    const midLadoMz24 = {
+      lat: (wilderV1LL.lat + esqSEMz24V2LL.lat) / 2,
+      lng: (wilderV1LL.lng + esqSEMz24V2LL.lng) / 2
+    };
+    L.marker([midLadoMz24.lat, midLadoMz24.lng], {
+      icon: L.divIcon({
+        className: 'distance-label',
+        html: `Mz24: ${ladoMz24Dist}m`,
+        iconSize: [90, 16],
+        iconAnchor: [45, 8]
+      })
+    }).addTo(map);
+
+    // --- Alignment analysis: Onorato vs Pablo/Alcides ---
+    // Reference line: Pablo V4 -> Alcides V4 (east side vertices facing the street)
+    const pabloRef = { east: 215678.1653, north: 9367213.6696 };   // Pablo V4 (SE corner)
+    const alcidesRef = { east: 215697.05, north: 9367262.0383 };   // Alcides V4 (SE corner)
+    const onoratoV1 = { east: 215647.7892, north: 9367175.5857 };
+    const onoratoV2 = { east: 215637.2033, north: 9367149.5505 };
+
+    // Line equation: a*x + b*y + c = 0
+    const refA = alcidesRef.north - pabloRef.north;
+    const refB = -(alcidesRef.east - pabloRef.east);
+    const refC = (alcidesRef.east - pabloRef.east) * pabloRef.north - (alcidesRef.north - pabloRef.north) * pabloRef.east;
+    const refNorm = Math.sqrt(refA * refA + refB * refB);
+
+    // Perpendicular distances
+    const distOnoV1 = (refA * onoratoV1.east + refB * onoratoV1.north + refC) / refNorm;
+    const distOnoV2 = (refA * onoratoV2.east + refB * onoratoV2.north + refC) / refNorm;
+
+    // Projection of Onorato V1 onto reference line (foot of perpendicular)
+    const t1 = -(refA * onoratoV1.east + refB * onoratoV1.north + refC) / (refA * refA + refB * refB);
+    const projV1 = { east: onoratoV1.east + refA * t1, north: onoratoV1.north + refB * t1 };
+
+    const t2 = -(refA * onoratoV2.east + refB * onoratoV2.north + refC) / (refA * refA + refB * refB);
+    const projV2 = { east: onoratoV2.east + refA * t2, north: onoratoV2.north + refB * t2 };
+
+    // Convert to LatLng
+    const pabloRefLL = utmToLatLng(pabloRef.east, pabloRef.north, 18, true);
+    const alcidesRefLL = utmToLatLng(alcidesRef.east, alcidesRef.north, 18, true);
+    const onoV1LL = utmToLatLng(onoratoV1.east, onoratoV1.north, 18, true);
+    const onoV2LL = utmToLatLng(onoratoV2.east, onoratoV2.north, 18, true);
+    const projV1LL = utmToLatLng(projV1.east, projV1.north, 18, true);
+    const projV2LL = utmToLatLng(projV2.east, projV2.north, 18, true);
+
+    // Direction unit vector of Jr. Moyobamba (Pablo V4 -> Alcides V4, south to north)
+    const lineDx = alcidesRef.east - pabloRef.east;
+    const lineDy = alcidesRef.north - pabloRef.north;
+    const lineLen = Math.sqrt(lineDx * lineDx + lineDy * lineDy);
+    const lineUx = lineDx / lineLen;
+    const lineUy = lineDy / lineLen;
+
+    // Yellow line 1 (west): Pablo V4 -> Alcides V4, extended south to Hildebran V2 and north to Opuesta Alcides V2
+    const hildebranV2 = { east: 215618.0938, north: 9367101.6239 };
+    const opAlcidesV2Ref = { east: 215631.9946, north: 9367317.2673 };
+    const tHildW = (hildebranV2.east - pabloRef.east) * lineUx + (hildebranV2.north - pabloRef.north) * lineUy;
+    const tOpAlcW = (opAlcidesV2Ref.east - pabloRef.east) * lineUx + (opAlcidesV2Ref.north - pabloRef.north) * lineUy;
+    const extA = { east: pabloRef.east + lineUx * tHildW, north: pabloRef.north + lineUy * tHildW };
+    const extB = { east: pabloRef.east + lineUx * tOpAlcW, north: pabloRef.north + lineUy * tOpAlcW };
+    const extALL = utmToLatLng(extA.east, extA.north, 18, true);
+    const extBLL = utmToLatLng(extB.east, extB.north, 18, true);
+
+    L.polyline(
+      [[extALL.lat, extALL.lng], [extBLL.lat, extBLL.lng]],
+      { color: '#FFD600', weight: 3, dashArray: '10, 6', opacity: 0.9 }
+    ).addTo(map).bindPopup('<b>Linea de alineacion oeste</b><br>Pablo V4 → Alcides V4 (proyectada)<br>(lado este Mz33 / borde oeste Jr. Moyobamba)');
+
+    // --- Second yellow line: east side of Jr. Moyobamba (Brijido V1 side) ---
+    const brijidoV1 = { east: 215691.9285, north: 9367210.6303 };
+    const brijidoV2 = { east: 215701.9199, north: 9367236.6628 };
+
+    // Street width (perpendicular distance from Brijido to Pablo/Alcides line)
+    const streetWidthSouth = Math.abs((refA * brijidoV1.east + refB * brijidoV1.north + refC) / refNorm);
+    const streetWidthNorth = Math.abs((refA * brijidoV2.east + refB * brijidoV2.north + refC) / refNorm);
+
+    // Yellow line 2 (east): Brijido V1 -> V2, extended south to Hildebran V2 and north to Alcides V3
+    const alcidesV3Ref = { east: 215707.0415, north: 9367288.0708 };
+    const tHildE = (hildebranV2.east - brijidoV1.east) * lineUx + (hildebranV2.north - brijidoV1.north) * lineUy;
+    const tAlcV3E = (alcidesV3Ref.east - brijidoV1.east) * lineUx + (alcidesV3Ref.north - brijidoV1.north) * lineUy;
+    const ext2A = { east: brijidoV1.east + lineUx * tHildE, north: brijidoV1.north + lineUy * tHildE };
+    const ext2B = { east: brijidoV1.east + lineUx * tAlcV3E, north: brijidoV1.north + lineUy * tAlcV3E };
+    const ext2ALL = utmToLatLng(ext2A.east, ext2A.north, 18, true);
+    const ext2BLL = utmToLatLng(ext2B.east, ext2B.north, 18, true);
+
+    L.polyline(
+      [[ext2ALL.lat, ext2ALL.lng], [ext2BLL.lat, ext2BLL.lng]],
+      { color: '#FFD600', weight: 3, dashArray: '10, 6', opacity: 0.9 }
+    ).addTo(map).bindPopup('<b>Linea de alineacion este</b><br>Brijido Ramirez V1 → V2 (proyectada)<br>(lado oeste Mz35 / borde este Jr. Moyobamba)');
+
+    // Draw street width indicator (green line between the two yellow lines)
+    const brijV1LL = utmToLatLng(brijidoV1.east, brijidoV1.north, 18, true);
+    const pabloV4LL = utmToLatLng(pabloRef.east, pabloRef.north, 18, true);
+    L.polyline(
+      [[pabloV4LL.lat, pabloV4LL.lng], [brijV1LL.lat, brijV1LL.lng]],
+      { color: '#4CAF50', weight: 3, opacity: 0.9 }
+    ).addTo(map);
+
+    // Street width label
+    const streetMid = {
+      lat: (pabloV4LL.lat + brijV1LL.lat) / 2,
+      lng: (pabloV4LL.lng + brijV1LL.lng) / 2
+    };
+    L.marker([streetMid.lat, streetMid.lng], {
+      icon: L.divIcon({
+        className: 'measurement-label',
+        html: `Jr. Moyobamba: ${((streetWidthSouth + streetWidthNorth) / 2).toFixed(1)} m`,
+        iconSize: [140, 20],
+        iconAnchor: [70, -5]
+      })
+    }).addTo(map);
+
+    // --- Line between Punto ideal V1 and Yovani V4 (cross street width) ---
+    const yovaniV4 = { east: 215665.9551, north: 9367168.5793 };
+    const yovaniV4LL = utmToLatLng(yovaniV4.east, yovaniV4.north, 18, true);
+    const distProjYovani = Math.sqrt(
+      Math.pow(yovaniV4.east - projV1.east, 2) + Math.pow(yovaniV4.north - projV1.north, 2)
+    );
+
+    L.polyline(
+      [[projV1LL.lat, projV1LL.lng], [yovaniV4LL.lat, yovaniV4LL.lng]],
+      { color: '#4CAF50', weight: 3, opacity: 0.9 }
+    ).addTo(map);
+
+    const midProjYov = {
+      lat: (projV1LL.lat + yovaniV4LL.lat) / 2,
+      lng: (projV1LL.lng + yovaniV4LL.lng) / 2
+    };
+    L.marker([midProjYov.lat, midProjYov.lng], {
+      icon: L.divIcon({
+        className: 'measurement-label',
+        html: `${distProjYovani.toFixed(2)} m`,
+        iconSize: [70, 20],
+        iconAnchor: [35, -5]
+      })
+    }).addTo(map);
+
+
+    // --- Alignment analysis 2: Calle perpendicular (entre Mz30/Mz32 y Mz33) ---
+    // Reference line: Valerio SC V4 -> Moises Marin V4 (lado oeste Mz32, borde este de la calle)
+    const valerioV4 = { east: 215573.037, north: 9367205.374 };
+    const moisesV4 = { east: 215543.6415, north: 9367130.8227 };
+    const conflV1 = { east: 215588.0044, north: 9367248.8524 };
+    const conflV4 = { east: 215600.2134, north: 9367244.3296 };
+
+    // Line equation for Valerio SC V4 -> Moises V4
+    const ref2A = moisesV4.north - valerioV4.north;
+    const ref2B = -(moisesV4.east - valerioV4.east);
+    const ref2C = (moisesV4.east - valerioV4.east) * valerioV4.north - (moisesV4.north - valerioV4.north) * valerioV4.east;
+    const ref2Norm = Math.sqrt(ref2A * ref2A + ref2B * ref2B);
+
+    // Perpendicular distances
+    const distConflV1 = (ref2A * conflV1.east + ref2B * conflV1.north + ref2C) / ref2Norm;
+    const distConflV4 = (ref2A * conflV4.east + ref2B * conflV4.north + ref2C) / ref2Norm;
+
+    // Street width: Jesus V3 and Sra. Yola (Karen) V4 to Valerio-Moises line
+    const jesusV3 = { east: 215556.968, north: 9367208.8459 };
+    const karenV4Pt = { east: 215528.1671, north: 9367134.2974 };
+    const streetW2North = Math.abs((ref2A * jesusV3.east + ref2B * jesusV3.north + ref2C) / ref2Norm);
+    const streetW2South = Math.abs((ref2A * karenV4Pt.east + ref2B * karenV4Pt.north + ref2C) / ref2Norm);
+
+    // Projections of Conflictiva V1 and V4 onto reference line
+    const tc1 = -(ref2A * conflV1.east + ref2B * conflV1.north + ref2C) / (ref2A * ref2A + ref2B * ref2B);
+    const projConflV1 = { east: conflV1.east + ref2A * tc1, north: conflV1.north + ref2B * tc1 };
+
+    const tc4 = -(ref2A * conflV4.east + ref2B * conflV4.north + ref2C) / (ref2A * ref2A + ref2B * ref2B);
+    const projConflV4 = { east: conflV4.east + ref2A * tc4, north: conflV4.north + ref2B * tc4 };
+
+    // Convert to LatLng
+    const valerioV4LL = utmToLatLng(valerioV4.east, valerioV4.north, 18, true);
+    const moisesV4LL = utmToLatLng(moisesV4.east, moisesV4.north, 18, true);
+    const conflV1LL = utmToLatLng(conflV1.east, conflV1.north, 18, true);
+    const conflV4LL = utmToLatLng(conflV4.east, conflV4.north, 18, true);
+    const projConflV1LL = utmToLatLng(projConflV1.east, projConflV1.north, 18, true);
+    const projConflV4LL = utmToLatLng(projConflV4.east, projConflV4.north, 18, true);
+    const jesusV3LL = utmToLatLng(jesusV3.east, jesusV3.north, 18, true);
+    const karenV4LL = utmToLatLng(karenV4Pt.east, karenV4Pt.north, 18, true);
+
+    // Direction vector of transversal street (Moises V4 -> Valerio SC V4, south to north)
+    const line2Dx = valerioV4.east - moisesV4.east;
+    const line2Dy = valerioV4.north - moisesV4.north;
+    const line2Len = Math.sqrt(line2Dx * line2Dx + line2Dy * line2Dy);
+    const line2Ux = line2Dx / line2Len;
+    const line2Uy = line2Dy / line2Len;
+
+    // Orange line 1: Moises V4 -> Valerio SC V4 extended north to height of Opuesta Alcides V2
+    const opAlcidesV2 = { east: 215631.9946, north: 9367317.2673 };
+    // Project opAlcidesV2 onto the Moises-Valerio line to find how far to extend
+    const tOpAlc = ((opAlcidesV2.east - moisesV4.east) * line2Ux + (opAlcidesV2.north - moisesV4.north) * line2Uy);
+    const ext2LA = { east: moisesV4.east - line2Ux * 20, north: moisesV4.north - line2Uy * 20 }; // 20m past Moises south
+    const ext2LB = { east: moisesV4.east + line2Ux * tOpAlc, north: moisesV4.north + line2Uy * tOpAlc }; // to Opuesta Alcides height
+    const ext2LALL = utmToLatLng(ext2LA.east, ext2LA.north, 18, true);
+    const ext2LBLL = utmToLatLng(ext2LB.east, ext2LB.north, 18, true);
+
+    L.polyline(
+      [[ext2LALL.lat, ext2LALL.lng], [ext2LBLL.lat, ext2LBLL.lng]],
+      { color: '#FF9800', weight: 3, dashArray: '10, 6', opacity: 0.9 }
+    ).addTo(map).bindPopup('<b>Alineacion calle transversal - Este</b><br>Moises V4 → Valerio SC V4 (proyectada hasta Op. Alcides V2)<br>(lado oeste Mz32)');
+
+    // Orange line 2: Sra. Yola (Karen) V4 -> Jesus V3 extended north to height of Op. Abilio Arce V1
+    const opAbilioV1 = { east: 215605.0226, north: 9367332.3556 };
+    // Direction is same: Karen->Jesus runs parallel to Moises->Valerio
+    const tOpAbilio = ((opAbilioV1.east - karenV4Pt.east) * line2Ux + (opAbilioV1.north - karenV4Pt.north) * line2Uy);
+    const ext2RA = { east: karenV4Pt.east - line2Ux * 20, north: karenV4Pt.north - line2Uy * 20 }; // 20m past Karen south
+    const ext2RB = { east: karenV4Pt.east + line2Ux * tOpAbilio, north: karenV4Pt.north + line2Uy * tOpAbilio }; // to Op Abilio height
+    const ext2RALL = utmToLatLng(ext2RA.east, ext2RA.north, 18, true);
+    const ext2RBLL = utmToLatLng(ext2RB.east, ext2RB.north, 18, true);
+
+    L.polyline(
+      [[ext2RALL.lat, ext2RALL.lng], [ext2RBLL.lat, ext2RBLL.lng]],
+      { color: '#FF9800', weight: 3, dashArray: '10, 6', opacity: 0.9 }
+    ).addTo(map).bindPopup('<b>Alineacion calle transversal - Oeste</b><br>Sra. Yola (Karen) V4 → Jesus V3 (proyectada hasta Op. Abilio V1)<br>(lado este Mz30)');
+
+    // Green line: street width between the two yellow lines
+    L.polyline(
+      [[valerioV4LL.lat, valerioV4LL.lng], [jesusV3LL.lat, jesusV3LL.lng]],
+      { color: '#4CAF50', weight: 3, opacity: 0.9 }
+    ).addTo(map);
+
+    const streetMid2 = {
+      lat: (valerioV4LL.lat + jesusV3LL.lat) / 2,
+      lng: (valerioV4LL.lng + jesusV3LL.lng) / 2
+    };
+    L.marker([streetMid2.lat, streetMid2.lng], {
+      icon: L.divIcon({
+        className: 'measurement-label',
+        html: `Calle: ${((streetW2North + streetW2South) / 2).toFixed(1)} m`,
+        iconSize: [120, 20],
+        iconAnchor: [60, -5]
+      })
+    }).addTo(map);
+
+    // Red perpendicular lines from Conflictiva V1 and V4 to projection on Valerio-Moises line
+    L.polyline(
+      [[conflV1LL.lat, conflV1LL.lng], [projConflV1LL.lat, projConflV1LL.lng]],
+      { color: '#F44336', weight: 3, opacity: 0.9 }
+    ).addTo(map);
+
+    const midConflV1 = { lat: (conflV1LL.lat + projConflV1LL.lat) / 2, lng: (conflV1LL.lng + projConflV1LL.lng) / 2 };
+    L.marker([midConflV1.lat, midConflV1.lng], {
+      icon: L.divIcon({
+        className: 'measurement-label',
+        html: `${Math.abs(distConflV1).toFixed(2)} m`,
+        iconSize: [70, 20],
+        iconAnchor: [35, 10]
+      })
+    }).addTo(map);
+
+    L.polyline(
+      [[conflV4LL.lat, conflV4LL.lng], [projConflV4LL.lat, projConflV4LL.lng]],
+      { color: '#F44336', weight: 3, opacity: 0.9 }
+    ).addTo(map);
+
+    const midConflV4 = { lat: (conflV4LL.lat + projConflV4LL.lat) / 2, lng: (conflV4LL.lng + projConflV4LL.lng) / 2 };
+    L.marker([midConflV4.lat, midConflV4.lng], {
+      icon: L.divIcon({
+        className: 'measurement-label',
+        html: `${Math.abs(distConflV4).toFixed(2)} m`,
+        iconSize: [70, 20],
+        iconAnchor: [35, 10]
+      })
+    }).addTo(map);
+
+    // Green projection dots
+    [projConflV1LL, projConflV4LL].forEach((p, i) => {
+      L.circleMarker([p.lat, p.lng], {
+        radius: 5, color: '#4CAF50', fillColor: '#4CAF50', fillOpacity: 1, weight: 0
+      }).addTo(map).bindPopup(`Punto ideal V${i === 0 ? 1 : 4} de Esquina SW sobre linea Valerio-Moises`);
+    });
+
+    // Add alignment analysis to panel
+    const alignDiv = document.createElement('div');
+    alignDiv.className = 'legend';
+    alignDiv.innerHTML = `
+      <h4>Analisis de Alineacion</h4>
+      <p style="font-size:12px; color:#333; margin-bottom:4px;">
+        <b>Linea ref:</b> Pablo V4 → Alcides V4 (este)
+      </p>
+      <p style="font-size:12px; color:#F44336; margin-bottom:4px;">
+        <b>Onorato Becerra V1:</b> ${Math.abs(distOnoV1).toFixed(2)} m de desviacion
+      </p>
+      <p style="font-size:12px; color:#F44336; margin-bottom:4px;">
+        <b>Onorato Becerra V2:</b> ${Math.abs(distOnoV2).toFixed(2)} m de desviacion
+      </p>
+      <p style="font-size:12px; color:#4CAF50; margin-bottom:4px;">
+        <b>Jr. Moyobamba:</b> ${((streetWidthSouth + streetWidthNorth) / 2).toFixed(1)} m de ancho
+      </p>
+      <p style="font-size:11px; color:#666;">
+        Ancho sur (Pablo V4 - Brijido Ramirez V1): ${streetWidthSouth.toFixed(2)}m<br>
+        Ancho norte (hacia Brijido Ramirez V2): ${streetWidthNorth.toFixed(2)}m<br>
+        El terreno de Onorato Becerra esta desplazado ${Math.abs(distOnoV1).toFixed(2)}m (V1) a ${Math.abs(distOnoV2).toFixed(2)}m (V2) respecto a la linea de Pablo/Alcides.
+      </p>
+      <hr style="margin: 8px 0; border-color: #FF9800;">
+      <h4 style="color:#FF9800;">Calle Transversal (Mz30/Mz32 → Mz33)</h4>
+      <p style="font-size:12px; color:#333; margin-bottom:4px;">
+        <b>Linea ref:</b> Valerio SC V4 → Moises V4 (naranja)
+      </p>
+      <p style="font-size:12px; color:#F44336; margin-bottom:4px;">
+        <b>Esquina SW V1:</b> ${Math.abs(distConflV1).toFixed(2)} m ${distConflV1 > 0 ? '(fuera hacia Mz33)' : '(dentro de Mz32)'}
+      </p>
+      <p style="font-size:12px; color:#F44336; margin-bottom:4px;">
+        <b>Esquina SW V4:</b> ${Math.abs(distConflV4).toFixed(2)} m ${distConflV4 > 0 ? '(fuera hacia Mz33)' : '(cruza la linea de Mz32)'}
+      </p>
+      <p style="font-size:12px; color:#4CAF50; margin-bottom:4px;">
+        <b>Calle transversal:</b> ${((streetW2North + streetW2South) / 2).toFixed(1)} m de ancho
+      </p>
+      <p style="font-size:11px; color:#666;">
+        Ancho norte (Valerio-Jesus): ${streetW2North.toFixed(2)}m<br>
+        Ancho sur (Moises-Karen): ${streetW2South.toFixed(2)}m<br>
+        Esquina SW V1 esta a ${Math.abs(distConflV1).toFixed(2)}m de la linea Mz32. V4 cruza ${Math.abs(distConflV4).toFixed(2)}m al otro lado.
+      </p>
+    `;
+    document.getElementById('infoPanel').insertBefore(alignDiv, document.querySelector('.info-panel hr'));
+
+    // --- Street name labels (centered between parallel street lines) ---
+
+    // Jr. Moyobamba: center between yellow west line (Pablo V4→Alcides) and yellow east line (Brijido V1→V2)
+    // Take midpoints of each line at same height, then average
+    const pabloV4Pt = { east: 215678.1653, north: 9367213.6696 };
+    const brijV1Pt = { east: 215691.9285, north: 9367210.6303 };
+    const alcidesV4Pt = { east: 215697.05, north: 9367262.0383 };
+    const brijV2Pt = { east: 215701.9199, north: 9367236.6628 };
+    // Center at mid-height between Pablo and Alcides
+    const jrMoyoMid = {
+      east: (pabloV4Pt.east + brijV1Pt.east + alcidesV4Pt.east + brijV2Pt.east) / 4,
+      north: (pabloV4Pt.north + brijV1Pt.north + alcidesV4Pt.north + brijV2Pt.north) / 4
+    };
+    const jrMoyoLL = utmToLatLng(jrMoyoMid.east, jrMoyoMid.north, 18, true);
+    L.marker([jrMoyoLL.lat, jrMoyoLL.lng], {
+      icon: L.divIcon({
+        className: 'street-label',
+        html: 'Jr. Moyobamba',
+        iconSize: [130, 20],
+        iconAnchor: [65, 10]
+      })
+    }).addTo(map);
+
+    // Jr. Rioja: center between orange east line (Valerio→Moises) and orange west line (Karen→Jesus)
+    // Take points at same height on both lines, then average
+    const jrRiojaMid = {
+      east: (valerioV4.east + jesusV3.east + moisesV4.east + karenV4Pt.east) / 4,
+      north: (valerioV4.north + jesusV3.north + moisesV4.north + karenV4Pt.north) / 4
+    };
+    const jrRiojaLL = utmToLatLng(jrRiojaMid.east, jrRiojaMid.north, 18, true);
+    L.marker([jrRiojaLL.lat, jrRiojaLL.lng], {
+      icon: L.divIcon({
+        className: 'street-label',
+        html: 'Jr. Rioja',
+        iconSize: [100, 20],
+        iconAnchor: [50, 10]
+      })
+    }).addTo(map);
+
+    // Av. Marginal - Fernando Belaunde Terry: E-W along south edge of Mz32
+    // South side of Mz32 perimeter runs between Moises V4 and the SE projected corner
+    // Center below the south side of the Mz32 perimeter
+    const mz32SEdge1 = { east: 215543.6415, north: 9367130.8227 }; // Moises V4 (SW corner Mz32)
+    const mz32SEdge2 = { east: 215632.2513, north: 9367096.0716 }; // SE corner Mz32
+    const avMarginalMid = {
+      east: (mz32SEdge1.east + mz32SEdge2.east) / 2,
+      north: (mz32SEdge1.north + mz32SEdge2.north) / 2 - 12
+    };
+    const avMarginalLL = utmToLatLng(avMarginalMid.east, avMarginalMid.north, 18, true);
+    L.marker([avMarginalLL.lat, avMarginalLL.lng], {
+      icon: L.divIcon({
+        className: 'street-label street-label-av',
+        html: 'Av. Marginal - Fernando Belaunde Terry',
+        iconSize: [300, 20],
+        iconAnchor: [150, 10]
+      })
+    }).addTo(map);
+
+    // --- Measurement tool ---
+    let measuring = false;
+    let measurePoints = [];
+    let measureMarkers = [];
+    let measureLines = [];
+    let measureLabels = [];
+
+    function toggleMeasure() {
+      measuring = !measuring;
+      const btn = document.getElementById('measureBtn');
+      btn.classList.toggle('active', measuring);
+      btn.textContent = measuring ? 'Midiendo... (click 2 puntos)' : 'Medir distancia';
+      if (measuring) {
+        measurePoints = [];
+        map.getContainer().style.cursor = 'crosshair';
+      } else {
+        map.getContainer().style.cursor = '';
+      }
+    }
+
+    function clearMeasurements() {
+      measureMarkers.forEach(m => map.removeLayer(m));
+      measureLines.forEach(l => map.removeLayer(l));
+      measureLabels.forEach(l => map.removeLayer(l));
+      measureMarkers = [];
+      measureLines = [];
+      measureLabels = [];
+      measurePoints = [];
+    }
+
+    function haversineDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    map.on('click', function (e) {
+      if (!measuring) return;
+
+      measurePoints.push(e.latlng);
+
+      const marker = L.circleMarker(e.latlng, {
+        radius: 5,
+        color: '#FF5722',
+        fillColor: '#FF5722',
+        fillOpacity: 1
+      }).addTo(map);
+      measureMarkers.push(marker);
+
+      if (measurePoints.length === 2) {
+        const [p1, p2] = measurePoints;
+        const dist = haversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+
+        const line = L.polyline([p1, p2], {
+          color: '#FF5722',
+          weight: 3,
+          dashArray: '8, 4'
+        }).addTo(map);
+        measureLines.push(line);
+
+        const midLat = (p1.lat + p2.lat) / 2;
+        const midLng = (p1.lng + p2.lng) / 2;
+        const label = L.marker([midLat, midLng], {
+          icon: L.divIcon({
+            className: 'measurement-label',
+            html: `${dist.toFixed(1)} m`,
+            iconSize: [80, 20],
+            iconAnchor: [40, 10]
+          })
+        }).addTo(map);
+        measureLabels.push(label);
+
+        measurePoints = [];
+      }
+    });
+  </script>
+</body>
+</html>

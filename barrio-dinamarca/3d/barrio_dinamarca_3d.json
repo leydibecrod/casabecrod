@@ -1,0 +1,464 @@
+{
+  "project": "Barrio Dinamarca - Centro Poblado Aguas Claras",
+  "location": "Moyobamba, San Martín, Perú",
+  "crs": "EPSG:32718 (UTM Zone 18S, WGS84)",
+  "units": "meters",
+
+  "perimetro_general": {
+    "area_ha": 2.68,
+    "perimetro_m": 2660.84,
+    "vertices": [
+      { "id": 1, "east": 214845.481, "north": 9367557.683, "dist_next": 236.68 },
+      { "id": 2, "east": 214932.4938, "north": 9367777.79, "dist_next": 708.62 },
+      { "id": 3, "east": 215590.091, "north": 9367513.762, "dist_next": 50.94 },
+      { "id": 4, "east": 215571.2759, "north": 9367466.427, "dist_next": 189.73 },
+      { "id": 5, "east": 215747.5837, "north": 9367396.338, "dist_next": 99.69 },
+      { "id": 6, "east": 215709.9431, "north": 9367304.031, "dist_next": 39.32 },
+      { "id": 7, "east": 215745.6907, "north": 9367287.653, "dist_next": 239.76 },
+      { "id": 8, "east": 215656.3094, "north": 9367065.176, "dist_next": 136.34 },
+      { "id": 9, "east": 215530.03, "north": 9367116.587, "dist_next": 94.41 },
+      { "id": 10, "east": 215494.7471, "north": 9367029.015, "dist_next": 94.86 },
+      { "id": 11, "east": 215406.5934, "north": 9367064.059, "dist_next": 94.41 },
+      { "id": 12, "east": 215441.8762, "north": 9367151.631, "dist_next": 297.39 },
+      { "id": 13, "east": 215165.5017, "north": 9367261.434, "dist_next": 56.21 },
+      { "id": 14, "east": 215186.6735, "north": 9367313.504, "dist_next": 109.87 },
+      { "id": 15, "east": 215084.2284, "north": 9367353.209, "dist_next": 39.21 },
+      { "id": 16, "east": 215046.1339, "north": 9367362.489, "dist_next": 183.85 },
+      { "id": 17, "east": 214931.3317, "north": 9367506.091, "dist_next": 100.16 }
+    ]
+  },
+
+  "manzanas": [
+    {
+      "id": "Mz32",
+      "color": "#FFFFFF",
+      "corners": [
+        { "label": "NW (Valerio V4)", "east": 215573.037, "north": 9367205.374 },
+        { "label": "NE (proyectada)", "east": 215651.2847, "north": 9367174.7025 },
+        { "label": "SE (proyectada)", "east": 215632.2513, "north": 9367096.0716 },
+        { "label": "SW (Moises V4)", "east": 215543.6415, "north": 9367130.8227 }
+      ],
+      "sides": { "N": 84.19, "E": 84.78, "S": 95.18, "W": 80.14 }
+    },
+    {
+      "id": "Mz33",
+      "color": "#FFEB3B",
+      "corners": [
+        { "label": "SE (Pablo V4)", "east": 215678.1653, "north": 9367213.6696 },
+        { "label": "NE (Alcides V3)", "east": 215707.0415, "north": 9367288.0708 },
+        { "label": "NW (proyectada)", "east": 215619.1299, "north": 9367322.2722 },
+        { "label": "SW (proyectada)", "east": 215590.2851, "north": 9367247.6291 }
+      ],
+      "sides": { "SE": 79.62, "NE": 94.33, "NW": 79.68, "SW": 93.81 }
+    },
+    {
+      "id": "Mz30",
+      "color": "#00E676",
+      "corners": [
+        { "label": "NW (Rupa Rustic V2)", "east": 215482.5182, "north": 9367237.4542 },
+        { "label": "NE (Jesus Becerra V3)", "east": 215556.968, "north": 9367208.8459 },
+        { "label": "SE (Sra. Yola V4)", "east": 215528.1671, "north": 9367134.2974 },
+        { "label": "SW (Esq. SW Mz30 V1)", "east": 215453.7173, "north": 9367162.9055 }
+      ],
+      "sides": { "N": 79.76, "E": 79.92, "S": 79.76, "W": 79.92 }
+    },
+    {
+      "id": "Mz29",
+      "color": "#CE93D8",
+      "corners": [
+        { "label": "NW (Esq. NW Mz29 V4)", "east": 215531.0101, "north": 9367362.8856 },
+        { "label": "NE (Op. Abilio V1)", "east": 215605.0226, "north": 9367332.3556 },
+        { "label": "SE (Abulio V1)", "east": 215574.5831, "north": 9367258.5379 },
+        { "label": "SW (Pintado Huaman V2)", "east": 215500.72, "north": 9367288.9208 }
+      ],
+      "sides": { "N": 80.06, "E": 79.85, "S": 79.87, "W": 79.93 }
+    }
+  ],
+
+  "solares": [
+    {
+      "name": "Valerio Santa Cruz",
+      "manzana": "Mz32",
+      "color": "#4CAF50",
+      "vertices": [
+        { "east": 215590.311, "north": 9367198.3636 },
+        { "east": 215579.725, "north": 9367172.3284 },
+        { "east": 215563.0456, "north": 9367179.3414 },
+        { "east": 215573.037, "north": 9367205.374 }
+      ],
+      "sides_m": [28.11, 18.09, 27.88, 18.64],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Guillermo Leon",
+      "manzana": "Mz32",
+      "color": "#66BB6A",
+      "vertices": [
+        { "east": 215604.01, "north": 9367193.0352 },
+        { "east": 215593.647, "north": 9367167.0011 },
+        { "east": 215579.724, "north": 9367172.5498 },
+        { "east": 215590.0874, "north": 9367198.5102 }
+      ],
+      "sides_m": [28.02, 14.99, 27.95, 14.96],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Sr. Onorato Becerra",
+      "manzana": "Mz32",
+      "color": "#2196F3",
+      "vertices": [
+        { "east": 215647.7892, "north": 9367175.5857 },
+        { "east": 215637.2033, "north": 9367149.5505 },
+        { "east": 215615.1635, "north": 9367158.6069 },
+        { "east": 215625.4522, "north": 9367184.6407 }
+      ],
+      "sides_m": [28.11, 23.83, 27.99, 24.10],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Alsides Briones",
+      "manzana": "Mz33",
+      "color": "#9C27B0",
+      "vertices": [
+        { "east": 215682.1595, "north": 9367267.8781 },
+        { "east": 215692.151, "north": 9367293.9106 },
+        { "east": 215707.0415, "north": 9367288.0708 },
+        { "east": 215697.05, "north": 9367262.0383 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Pablo Hinostroza",
+      "manzana": "Mz33",
+      "color": "#FF9800",
+      "vertices": [
+        { "east": 215665.0622, "north": 9367218.7053 },
+        { "east": 215675.1277, "north": 9367244.812 },
+        { "east": 215688.2308, "north": 9367239.7763 },
+        { "east": 215678.1653, "north": 9367213.6696 }
+      ],
+      "sides_m": [27.98, 14.04, 27.98, 14.04],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Brijido Ramirez",
+      "manzana": "Mz35",
+      "color": "#00BCD4",
+      "vertices": [
+        { "east": 215691.9285, "north": 9367210.6303 },
+        { "east": 215701.9199, "north": 9367236.6628 },
+        { "east": 215715.6186, "north": 9367231.4083 },
+        { "east": 215705.6271, "north": 9367205.3758 }
+      ],
+      "sides_m": [27.88, 14.67, 27.88, 14.67],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Casa Comunal Dinamarca",
+      "manzana": "Mz35",
+      "color": "#80CBC4",
+      "vertices": [
+        { "east": 215705.7758, "north": 9367205.3764 },
+        { "east": 215715.6173, "north": 9367231.7036 },
+        { "east": 215729.7619, "north": 9367226.4511 },
+        { "east": 215719.9204, "north": 9367200.1239 }
+      ],
+      "sides_m": [28.11, 15.09, 28.11, 15.09],
+      "default_height_m": 5,
+      "type": "communal"
+    },
+    {
+      "name": "Hildebran Becerra",
+      "manzana": "Mz32",
+      "color": "#1565C0",
+      "vertices": [
+        { "east": 215628.6798, "north": 9367127.659 },
+        { "east": 215618.0938, "north": 9367101.6239 },
+        { "east": 215603.7979, "north": 9367107.4663 },
+        { "east": 215613.1948, "north": 9367133.4962 }
+      ],
+      "sides_m": [28.11, 15.44, 27.67, 16.55],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Yovani Cayao, Jorge Lopez",
+      "manzana": "Mz36",
+      "color": "#F44336",
+      "vertices": [
+        { "east": 215680.2483, "north": 9367163.3274 },
+        { "east": 215670.2569, "north": 9367137.295 },
+        { "east": 215655.9636, "north": 9367142.5468 },
+        { "east": 215665.9551, "north": 9367168.5793 }
+      ],
+      "sides_m": [27.88, 15.23, 27.88, 15.23],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Sara Togas",
+      "manzana": "Mz36",
+      "color": "#D84315",
+      "vertices": [
+        { "east": 215655.9636, "north": 9367142.5468 },
+        { "east": 215683.9582, "north": 9367131.4498 },
+        { "east": 215679.8464, "north": 9367120.2095 },
+        { "east": 215651.8518, "north": 9367131.3064 }
+      ],
+      "sides_m": [30.11, 11.97, 30.11, 11.97],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Jesus Becerra",
+      "manzana": "Mz30",
+      "color": "#388E3C",
+      "vertices": [
+        { "east": 215532.0887, "north": 9367188.0625 },
+        { "east": 215542.0775, "north": 9367214.6857 },
+        { "east": 215556.968, "north": 9367208.8459 },
+        { "east": 215546.9766, "north": 9367182.8134 }
+      ],
+      "sides_m": [28.44, 15.99, 27.88, 15.79],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Abulio Arce",
+      "manzana": "Mz29",
+      "color": "#7B1FA2",
+      "vertices": [
+        { "east": 215574.5831, "north": 9367258.5379 },
+        { "east": 215559.6927, "north": 9367264.3777 },
+        { "east": 215570.2787, "north": 9367290.413 },
+        { "east": 215585.1718, "north": 9367283.9825 }
+      ],
+      "sides_m": [15.99, 28.11, 16.22, 27.56],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Opuesta Alcides",
+      "manzana": "Mz33",
+      "color": "#AB47BC",
+      "vertices": [
+        { "east": 215622.0031, "north": 9367291.2347 },
+        { "east": 215631.9946, "north": 9367317.2673 },
+        { "east": 215646.885, "north": 9367311.4275 },
+        { "east": 215636.8936, "north": 9367285.3949 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Frente Abilio",
+      "manzana": "Mz33",
+      "color": "#5C6BC0",
+      "vertices": [
+        { "east": 215603.4921, "north": 9367242.4247 },
+        { "east": 215613.4828, "north": 9367268.6049 },
+        { "east": 215625.6925, "north": 9367263.9344 },
+        { "east": 215615.5531, "north": 9367237.7535 }
+      ],
+      "sides_m": [28.02, 13.07, 28.08, 12.93],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Sra. Yola (Karen)",
+      "manzana": "Mz30",
+      "color": "#26A69A",
+      "vertices": [
+        { "east": 215513.2792, "north": 9367139.5465 },
+        { "east": 215523.268, "north": 9367166.1697 },
+        { "east": 215538.1584, "north": 9367160.3299 },
+        { "east": 215528.1671, "north": 9367134.2974 }
+      ],
+      "sides_m": [28.44, 15.99, 27.88, 15.79],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Moises Marin",
+      "manzana": "Mz32",
+      "color": "#795548",
+      "vertices": [
+        { "east": 215554.2275, "north": 9367156.8579 },
+        { "east": 215569.1179, "north": 9367151.0181 },
+        { "east": 215558.532, "north": 9367124.983 },
+        { "east": 215543.6415, "north": 9367130.8227 }
+      ],
+      "sides_m": [15.99, 28.11, 15.99, 28.11],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Rupa Rustic",
+      "manzana": "Mz30",
+      "color": "#00897B",
+      "vertices": [
+        { "east": 215472.5268, "north": 9367211.4216 },
+        { "east": 215482.5182, "north": 9367237.4542 },
+        { "east": 215497.4087, "north": 9367231.6144 },
+        { "east": 215487.4173, "north": 9367205.5819 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Esquina Sur Oeste Mz30",
+      "manzana": "Mz30",
+      "color": "#00695C",
+      "vertices": [
+        { "east": 215453.7173, "north": 9367162.9055 },
+        { "east": 215463.7087, "north": 9367188.9381 },
+        { "east": 215478.5992, "north": 9367183.0983 },
+        { "east": 215468.6078, "north": 9367157.0658 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Pintado Huaman",
+      "manzana": "Mz29",
+      "color": "#6A1B9A",
+      "vertices": [
+        { "east": 215515.0185, "north": 9367282.4877 },
+        { "east": 215500.72, "north": 9367288.9208 },
+        { "east": 215511.306, "north": 9367314.9561 },
+        { "east": 215526.1991, "north": 9367308.5256 }
+      ],
+      "sides_m": [15.68, 28.11, 16.22, 28.34],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Esquina Nor Oeste Mz29",
+      "manzana": "Mz29",
+      "color": "#4A148C",
+      "vertices": [
+        { "east": 215543.9663, "north": 9367357.4801 },
+        { "east": 215536.3194, "north": 9367338.9886 },
+        { "east": 215523.3632, "north": 9367344.394 },
+        { "east": 215531.0101, "north": 9367362.8856 }
+      ],
+      "sides_m": [20.01, 14.04, 20.01, 14.04],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Op. Abilio Arce",
+      "manzana": "Mz29",
+      "color": "#9C27B0",
+      "vertices": [
+        { "east": 215605.0226, "north": 9367332.3556 },
+        { "east": 215594.2872, "north": 9367306.4674 },
+        { "east": 215579.5441, "north": 9367312.6032 },
+        { "east": 215590.1308, "north": 9367338.4907 }
+      ],
+      "sides_m": [28.03, 15.97, 27.97, 16.11],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Esquina SW Mz33",
+      "manzana": "Mz33",
+      "color": "#F44336",
+      "vertices": [
+        { "east": 215588.0044, "north": 9367248.8524 },
+        { "east": 215597.6979, "north": 9367275.0313 },
+        { "east": 215609.9062, "north": 9367270.6561 },
+        { "east": 215600.2134, "north": 9367244.3296 }
+      ],
+      "sides_m": [27.92, 12.97, 28.05, 13.02],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Wilder Coronel",
+      "manzana": "Mz24",
+      "color": "#FFB300",
+      "vertices": [
+        { "east": 215467.6224, "north": 9367244.4752 },
+        { "east": 215457.631, "north": 9367218.4427 },
+        { "east": 215442.7405, "north": 9367224.2824 },
+        { "east": 215452.7319, "north": 9367250.315 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99],
+      "default_height_m": 4,
+      "type": "residential"
+    },
+    {
+      "name": "Esquina Sur Este Mz24",
+      "manzana": "Mz24",
+      "color": "#FF8F00",
+      "vertices": [
+        { "east": 215448.5156, "north": 9367195.9578 },
+        { "east": 215438.2257, "north": 9367170.2192 },
+        { "east": 215423.3352, "north": 9367176.0589 },
+        { "east": 215433.9211, "north": 9367202.0942 }
+      ],
+      "sides_m": [27.72, 15.99, 28.11, 15.83],
+      "default_height_m": 4,
+      "type": "residential"
+    }
+  ],
+
+  "calles": [
+    {
+      "name": "Jr. Moyobamba",
+      "direction": "NE-SW",
+      "width_approx_m": 14.5,
+      "center_utm": { "east": 215692.2909, "north": 9367230.4503 },
+      "description": "Entre Mz33 (lado este) y Mz35 (lado oeste). Líneas amarillas de alineamiento."
+    },
+    {
+      "name": "Jr. Rioja",
+      "direction": "NE-SW",
+      "width_approx_m": 27,
+      "center_utm": { "east": 215557.37, "north": 9367172.89 },
+      "description": "Entre Mz32 (lado norte) y Mz30 (lado sur). Líneas naranjas de alineamiento."
+    },
+    {
+      "name": "Av. Marginal - Fernando Belaunde Terry",
+      "direction": "E-W",
+      "width_approx_m": 20,
+      "center_utm": { "east": 215587.946, "north": 9367101.447 },
+      "description": "Calle principal E-W entre Mz32 (lado sur) y las manzanas al sur."
+    }
+  ],
+
+  "alignment_lines": {
+    "jr_moyobamba_west": {
+      "description": "Pablo V4 → Alcides V4 (borde oeste Jr. Moyobamba)",
+      "points": [
+        { "east": 215678.1653, "north": 9367213.6696 },
+        { "east": 215697.05, "north": 9367262.0383 }
+      ]
+    },
+    "jr_moyobamba_east": {
+      "description": "Brijido V1 → V2 (borde este Jr. Moyobamba)",
+      "points": [
+        { "east": 215691.9285, "north": 9367210.6303 },
+        { "east": 215701.9199, "north": 9367236.6628 }
+      ]
+    },
+    "jr_rioja_east": {
+      "description": "Valerio V4 → Moises V4 (borde este Jr. Rioja)",
+      "points": [
+        { "east": 215573.037, "north": 9367205.374 },
+        { "east": 215543.6415, "north": 9367130.8227 }
+      ]
+    }
+  }
+}

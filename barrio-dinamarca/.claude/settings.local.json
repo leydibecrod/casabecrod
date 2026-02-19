@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"\" \"C:\\\\Users\\\\lucas\\\\proyectos\\\\zonificacion-aguas-claras\\\\index.html\")",
+      "Bash(python -c:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(python export_map.py:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

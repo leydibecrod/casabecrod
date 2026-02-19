@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barrio Dinamarca 3D — Aguas Claras, Moyobamba</title>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0f1a;
+    --panel-bg: rgba(12, 18, 35, 0.92);
+    --panel-border: rgba(255, 255, 255, 0.06);
+    --text: #e8eaf0;
+    --text-dim: #7a8194;
+    --accent: #38bdf8;
+    --accent-dim: rgba(56, 189, 248, 0.15);
+    --green: #34d399;
+    --orange: #fb923c;
+    --red: #f87171;
+    --radius: 10px;
+    --font: 'DM Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  canvas { display: block; }
+
+  /* ===== 3D LABELS ===== */
+  .label-3d {
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0,0,0,0.55);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.08);
+    transform: translate(-50%, -100%);
+    transition: opacity 0.2s;
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 40px;
+    padding: 8px 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .topbar .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .topbar h1 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .topbar span {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  /* ===== SIDE PANEL ===== */
+  .panel {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    width: 300px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    z-index: 100;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel::-webkit-scrollbar { width: 4px; }
+  .panel::-webkit-scrollbar-track { background: transparent; }
+  .panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .panel-section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .panel-section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  /* ===== SOLAR INFO ===== */
+  .solar-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    line-height: 1.2;
+  }
+
+  .solar-mz {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .info-card {
+    background: rgba(255,255,255,0.04);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .info-card .val {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .info-card .lbl {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+
+  .sides-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .side-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
+    padding: 3px 7px;
+    color: var(--text-dim);
+  }
+
+  /* ===== CONTROLS ===== */
+  .control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .control-row:last-child { margin-bottom: 0; }
+
+  .control-row label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-dim);
+    min-width: 50px;
+  }
+
+  input[type="color"] {
+    -webkit-appearance: none;
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    padding: 0;
+  }
+
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+  input[type="color"]::-webkit-color-swatch { border-radius: 3px; border: none; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(56,189,248,0.4);
+  }
+
+  .height-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 30px;
+    text-align: right;
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  /* ===== LEGEND ===== */
+  .legend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 11px;
+  }
+
+  .legend-item:hover { background: rgba(255,255,255,0.06); }
+
+  .legend-item.active {
+    background: var(--accent-dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .legend-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .legend-mz {
+    font-size: 9px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 20px 10px;
+    color: var(--text-dim);
+  }
+
+  .empty-state .icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /* ===== KEYBOARD HINTS ===== */
+  .hints {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    z-index: 100;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    backdrop-filter: blur(10px);
+  }
+
+  .hint kbd {
+    font-family: var(--mono);
+    font-size: 9px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-weight: 500;
+  }
+
+  /* ===== COMPASS ===== */
+  .compass {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 100;
+    width: 56px;
+    height: 56px;
+  }
+
+  .compass svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 640px) {
+    .panel { width: 260px; right: 8px; top: 62px; }
+    .topbar { padding: 6px 14px; }
+    .topbar h1 { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<div class="topbar">
+  <div class="dot"></div>
+  <h1>Barrio Dinamarca</h1>
+  <span>Aguas Claras · Moyobamba · San Martín</span>
+</div>
+
+<!-- ===== SIDE PANEL ===== -->
+<div class="panel" id="panel">
+  <!-- SOLAR INFO (shown when selected) -->
+  <div id="solarInfo" style="display:none;">
+    <div class="panel-section">
+      <div class="section-label">Solar seleccionado</div>
+      <div class="solar-name" id="infoName">—</div>
+      <div class="solar-mz" id="infoMz">—</div>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="val" id="infoArea">—</div>
+          <div class="lbl">Área (m²)</div>
+        </div>
+        <div class="info-card">
+          <div class="val" id="infoPerim">—</div>
+          <div class="lbl">Perímetro (m)</div>
+        </div>
+      </div>
+      <div class="section-label" style="margin-top:10px;">Medidas de lados</div>
+      <div class="sides-list" id="infoSides"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Controles</div>
+      <div class="control-row">
+        <label>Color</label>
+        <input type="color" id="colorPicker" value="#4CAF50">
+      </div>
+      <div class="control-row">
+        <label>Altura</label>
+        <input type="range" id="heightSlider" min="1" max="15" value="4" step="0.5">
+        <span class="height-val" id="heightVal">4m</span>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn" id="btnDeselect">✕ Deseleccionar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div id="emptyState" class="panel-section">
+    <div class="empty-state">
+      <div class="icon">🏘️</div>
+      <p>Haz clic en un solar<br>para ver su información</p>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="panel-section">
+    <div class="section-label">Solares · <span id="solarCount">0</span> lotes</div>
+    <div class="legend-list" id="legendList"></div>
+  </div>
+</div>
+
+<!-- ===== KEYBOARD HINTS ===== -->
+<div class="hints">
+  <div class="hint"><kbd>W</kbd><kbd>S</kbd> Zoom</div>
+  <div class="hint"><kbd>A</kbd><kbd>D</kbd> Rotar</div>
+  <div class="hint">🖱️ Arrastrar para orbitar</div>
+</div>
+
+<!-- ===== THREE.JS ===== -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ============================================================
+// 1) LOAD JSON DATA (embedded inline)
+// ============================================================
+const DATA = {
+  "perimetro_general": {
+    "area_ha": 2.68,
+    "perimetro_m": 2660.84,
+    "vertices": [
+      { "id": 1, "east": 214845.481, "north": 9367557.683 },
+      { "id": 2, "east": 214932.4938, "north": 9367777.79 },
+      { "id": 3, "east": 215590.091, "north": 9367513.762 },
+      { "id": 4, "east": 215571.2759, "north": 9367466.427 },
+      { "id": 5, "east": 215747.5837, "north": 9367396.338 },
+      { "id": 6, "east": 215709.9431, "north": 9367304.031 },
+      { "id": 7, "east": 215745.6907, "north": 9367287.653 },
+      { "id": 8, "east": 215656.3094, "north": 9367065.176 },
+      { "id": 9, "east": 215530.03, "north": 9367116.587 },
+      { "id": 10, "east": 215494.7471, "north": 9367029.015 },
+      { "id": 11, "east": 215406.5934, "north": 9367064.059 },
+      { "id": 12, "east": 215441.8762, "north": 9367151.631 },
+      { "id": 13, "east": 215165.5017, "north": 9367261.434 },
+      { "id": 14, "east": 215186.6735, "north": 9367313.504 },
+      { "id": 15, "east": 215084.2284, "north": 9367353.209 },
+      { "id": 16, "east": 215046.1339, "north": 9367362.489 },
+      { "id": 17, "east": 214931.3317, "north": 9367506.091 }
+    ]
+  },
+  "manzanas": [
+    {
+      "id": "Mz32",
+      "corners": [
+        { "east": 215573.037, "north": 9367205.374 },
+        { "east": 215651.2847, "north": 9367174.7025 },
+        { "east": 215632.2513, "north": 9367096.0716 },
+        { "east": 215543.6415, "north": 9367130.8227 }
+      ]
+    },
+    {
+      "id": "Mz33",
+      "corners": [
+        { "east": 215678.1653, "north": 9367213.6696 },
+        { "east": 215707.0415, "north": 9367288.0708 },
+        { "east": 215619.1299, "north": 9367322.2722 },
+        { "east": 215590.2851, "north": 9367247.6291 }
+      ]
+    },
+    {
+      "id": "Mz30",
+      "corners": [
+        { "east": 215482.5182, "north": 9367237.4542 },
+        { "east": 215556.968, "north": 9367208.8459 },
+        { "east": 215528.1671, "north": 9367134.2974 },
+        { "east": 215453.7173, "north": 9367162.9055 }
+      ]
+    },
+    {
+      "id": "Mz29",
+      "corners": [
+        { "east": 215531.0101, "north": 9367362.8856 },
+        { "east": 215605.0226, "north": 9367332.3556 },
+        { "east": 215574.5831, "north": 9367258.5379 },
+        { "east": 215500.72, "north": 9367288.9208 }
+      ]
+    }
+  ],
+  "solares": [
+    { "name": "Valerio Santa Cruz", "manzana": "Mz32", "color": "#4CAF50",
+      "vertices": [
+        { "east": 215590.311, "north": 9367198.3636 },
+        { "east": 215579.725, "north": 9367172.3284 },
+        { "east": 215563.0456, "north": 9367179.3414 },
+        { "east": 215573.037, "north": 9367205.374 }
+      ],
+      "sides_m": [28.11, 18.09, 27.88, 18.64], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Guillermo Leon", "manzana": "Mz32", "color": "#66BB6A",
+      "vertices": [
+        { "east": 215604.01, "north": 9367193.0352 },
+        { "east": 215593.647, "north": 9367167.0011 },
+        { "east": 215579.724, "north": 9367172.5498 },
+        { "east": 215590.0874, "north": 9367198.5102 }
+      ],
+      "sides_m": [28.02, 14.99, 27.95, 14.96], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Sr. Onorato Becerra", "manzana": "Mz32", "color": "#2196F3",
+      "vertices": [
+        { "east": 215647.7892, "north": 9367175.5857 },
+        { "east": 215637.2033, "north": 9367149.5505 },
+        { "east": 215615.1635, "north": 9367158.6069 },
+        { "east": 215625.4522, "north": 9367184.6407 }
+      ],
+      "sides_m": [28.11, 23.83, 27.99, 24.10], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Alsides Briones", "manzana": "Mz33", "color": "#9C27B0",
+      "vertices": [
+        { "east": 215682.1595, "north": 9367267.8781 },
+        { "east": 215692.151, "north": 9367293.9106 },
+        { "east": 215707.0415, "north": 9367288.0708 },
+        { "east": 215697.05, "north": 9367262.0383 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Pablo Hinostroza", "manzana": "Mz33", "color": "#FF9800",
+      "vertices": [
+        { "east": 215665.0622, "north": 9367218.7053 },
+        { "east": 215675.1277, "north": 9367244.812 },
+        { "east": 215688.2308, "north": 9367239.7763 },
+        { "east": 215678.1653, "north": 9367213.6696 }
+      ],
+      "sides_m": [27.98, 14.04, 27.98, 14.04], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Brijido Ramirez", "manzana": "Mz35", "color": "#00BCD4",
+      "vertices": [
+        { "east": 215691.9285, "north": 9367210.6303 },
+        { "east": 215701.9199, "north": 9367236.6628 },
+        { "east": 215715.6186, "north": 9367231.4083 },
+        { "east": 215705.6271, "north": 9367205.3758 }
+      ],
+      "sides_m": [27.88, 14.67, 27.88, 14.67], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Casa Comunal Dinamarca", "manzana": "Mz35", "color": "#80CBC4",
+      "vertices": [
+        { "east": 215705.7758, "north": 9367205.3764 },
+        { "east": 215715.6173, "north": 9367231.7036 },
+        { "east": 215729.7619, "north": 9367226.4511 },
+        { "east": 215719.9204, "north": 9367200.1239 }
+      ],
+      "sides_m": [28.11, 15.09, 28.11, 15.09], "default_height_m": 5, "type": "communal"
+    },
+    { "name": "Hildebran Becerra", "manzana": "Mz32", "color": "#1565C0",
+      "vertices": [
+        { "east": 215628.6798, "north": 9367127.659 },
+        { "east": 215618.0938, "north": 9367101.6239 },
+        { "east": 215603.7979, "north": 9367107.4663 },
+        { "east": 215613.1948, "north": 9367133.4962 }
+      ],
+      "sides_m": [28.11, 15.44, 27.67, 16.55], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Yovani Cayao, Jorge Lopez", "manzana": "Mz36", "color": "#F44336",
+      "vertices": [
+        { "east": 215680.2483, "north": 9367163.3274 },
+        { "east": 215670.2569, "north": 9367137.295 },
+        { "east": 215655.9636, "north": 9367142.5468 },
+        { "east": 215665.9551, "north": 9367168.5793 }
+      ],
+      "sides_m": [27.88, 15.23, 27.88, 15.23], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Sara Togas", "manzana": "Mz36", "color": "#D84315",
+      "vertices": [
+        { "east": 215655.9636, "north": 9367142.5468 },
+        { "east": 215683.9582, "north": 9367131.4498 },
+        { "east": 215679.8464, "north": 9367120.2095 },
+        { "east": 215651.8518, "north": 9367131.3064 }
+      ],
+      "sides_m": [30.11, 11.97, 30.11, 11.97], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Jesus Becerra", "manzana": "Mz30", "color": "#388E3C",
+      "vertices": [
+        { "east": 215532.0887, "north": 9367188.0625 },
+        { "east": 215542.0775, "north": 9367214.6857 },
+        { "east": 215556.968, "north": 9367208.8459 },
+        { "east": 215546.9766, "north": 9367182.8134 }
+      ],
+      "sides_m": [28.44, 15.99, 27.88, 15.79], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Abulio Arce", "manzana": "Mz29", "color": "#7B1FA2",
+      "vertices": [
+        { "east": 215574.5831, "north": 9367258.5379 },
+        { "east": 215559.6927, "north": 9367264.3777 },
+        { "east": 215570.2787, "north": 9367290.413 },
+        { "east": 215585.1718, "north": 9367283.9825 }
+      ],
+      "sides_m": [15.99, 28.11, 16.22, 27.56], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Opuesta Alcides", "manzana": "Mz33", "color": "#AB47BC",
+      "vertices": [
+        { "east": 215622.0031, "north": 9367291.2347 },
+        { "east": 215631.9946, "north": 9367317.2673 },
+        { "east": 215646.885, "north": 9367311.4275 },
+        { "east": 215636.8936, "north": 9367285.3949 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Frente Abilio", "manzana": "Mz33", "color": "#5C6BC0",
+      "vertices": [
+        { "east": 215603.4921, "north": 9367242.4247 },
+        { "east": 215613.4828, "north": 9367268.6049 },
+        { "east": 215625.6925, "north": 9367263.9344 },
+        { "east": 215615.5531, "north": 9367237.7535 }
+      ],
+      "sides_m": [28.02, 13.07, 28.08, 12.93], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Sra. Yola (Karen)", "manzana": "Mz30", "color": "#26A69A",
+      "vertices": [
+        { "east": 215513.2792, "north": 9367139.5465 },
+        { "east": 215523.268, "north": 9367166.1697 },
+        { "east": 215538.1584, "north": 9367160.3299 },
+        { "east": 215528.1671, "north": 9367134.2974 }
+      ],
+      "sides_m": [28.44, 15.99, 27.88, 15.79], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Moises Marin", "manzana": "Mz32", "color": "#795548",
+      "vertices": [
+        { "east": 215554.2275, "north": 9367156.8579 },
+        { "east": 215569.1179, "north": 9367151.0181 },
+        { "east": 215558.532, "north": 9367124.983 },
+        { "east": 215543.6415, "north": 9367130.8227 }
+      ],
+      "sides_m": [15.99, 28.11, 15.99, 28.11], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Rupa Rustic", "manzana": "Mz30", "color": "#00897B",
+      "vertices": [
+        { "east": 215472.5268, "north": 9367211.4216 },
+        { "east": 215482.5182, "north": 9367237.4542 },
+        { "east": 215497.4087, "north": 9367231.6144 },
+        { "east": 215487.4173, "north": 9367205.5819 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Esquina Sur Oeste Mz30", "manzana": "Mz30", "color": "#00695C",
+      "vertices": [
+        { "east": 215453.7173, "north": 9367162.9055 },
+        { "east": 215463.7087, "north": 9367188.9381 },
+        { "east": 215478.5992, "north": 9367183.0983 },
+        { "east": 215468.6078, "north": 9367157.0658 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Pintado Huaman", "manzana": "Mz29", "color": "#6A1B9A",
+      "vertices": [
+        { "east": 215515.0185, "north": 9367282.4877 },
+        { "east": 215500.72, "north": 9367288.9208 },
+        { "east": 215511.306, "north": 9367314.9561 },
+        { "east": 215526.1991, "north": 9367308.5256 }
+      ],
+      "sides_m": [15.68, 28.11, 16.22, 28.34], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Esquina Nor Oeste Mz29", "manzana": "Mz29", "color": "#4A148C",
+      "vertices": [
+        { "east": 215543.9663, "north": 9367357.4801 },
+        { "east": 215536.3194, "north": 9367338.9886 },
+        { "east": 215523.3632, "north": 9367344.394 },
+        { "east": 215531.0101, "north": 9367362.8856 }
+      ],
+      "sides_m": [20.01, 14.04, 20.01, 14.04], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Op. Abilio Arce", "manzana": "Mz29", "color": "#9C27B0",
+      "vertices": [
+        { "east": 215605.0226, "north": 9367332.3556 },
+        { "east": 215594.2872, "north": 9367306.4674 },
+        { "east": 215579.5441, "north": 9367312.6032 },
+        { "east": 215590.1308, "north": 9367338.4907 }
+      ],
+      "sides_m": [28.03, 15.97, 27.97, 16.11], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Esquina SW Mz33", "manzana": "Mz33", "color": "#F44336",
+      "vertices": [
+        { "east": 215588.0044, "north": 9367248.8524 },
+        { "east": 215597.6979, "north": 9367275.0313 },
+        { "east": 215609.9062, "north": 9367270.6561 },
+        { "east": 215600.2134, "north": 9367244.3296 }
+      ],
+      "sides_m": [27.92, 12.97, 28.05, 13.02], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Wilder Coronel", "manzana": "Mz24", "color": "#FFB300",
+      "vertices": [
+        { "east": 215467.6224, "north": 9367244.4752 },
+        { "east": 215457.631, "north": 9367218.4427 },
+        { "east": 215442.7405, "north": 9367224.2824 },
+        { "east": 215452.7319, "north": 9367250.315 }
+      ],
+      "sides_m": [27.88, 15.99, 27.88, 15.99], "default_height_m": 4, "type": "residential"
+    },
+    { "name": "Esquina Sur Este Mz24", "manzana": "Mz24", "color": "#FF8F00",
+      "vertices": [
+        { "east": 215448.5156, "north": 9367195.9578 },
+        { "east": 215438.2257, "north": 9367170.2192 },
+        { "east": 215423.3352, "north": 9367176.0589 },
+        { "east": 215433.9211, "north": 9367202.0942 }
+      ],
+      "sides_m": [27.72, 15.99, 28.11, 15.83], "default_height_m": 4, "type": "residential"
+    }
+  ],
+  "calles": [
+    { "name": "Jr. Moyobamba", "width_approx_m": 14.5,
+      "center_utm": { "east": 215692.2909, "north": 9367230.4503 } },
+    { "name": "Jr. Rioja", "width_approx_m": 27,
+      "center_utm": { "east": 215557.37, "north": 9367172.89 } },
+    { "name": "Av. Marginal - F. Belaunde Terry", "width_approx_m": 20,
+      "center_utm": { "east": 215587.946, "north": 9367101.447 } }
+  ]
+};
+
+// ============================================================
+// 2) COORDINATE NORMALIZATION
+// ============================================================
+// Collect ALL coordinates to find center
+const allCoords = [];
+DATA.solares.forEach(s => s.vertices.forEach(v => allCoords.push(v)));
+DATA.manzanas.forEach(m => m.corners.forEach(c => allCoords.push(c)));
+DATA.perimetro_general.vertices.forEach(v => allCoords.push(v));
+
+const minE = Math.min(...allCoords.map(c => c.east));
+const maxE = Math.max(...allCoords.map(c => c.east));
+const minN = Math.min(...allCoords.map(c => c.north));
+const maxN = Math.max(...allCoords.map(c => c.north));
+const centerE = (minE + maxE) / 2;
+const centerN = (minN + maxN) / 2;
+
+function toLocal(east, north) {
+  return { x: east - centerE, z: -(north - centerN) };
+}
+
+// ============================================================
+// 3) THREE.JS SETUP
+// ============================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0f1a);
+scene.fog = new THREE.FogExp2(0x0a0f1a, 0.0008);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 2000);
+camera.position.set(0, 250, 200);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+// CSS2D Renderer for labels
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+document.body.appendChild(labelRenderer.domElement);
+
+// Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 30;
+controls.maxDistance = 600;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.target.set(0, 0, 0);
+
+// ============================================================
+// 4) LIGHTING
+// ============================================================
+const ambientLight = new THREE.AmbientLight(0x6688aa, 0.6);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffeedd, 1.4);
+dirLight.position.set(100, 200, 80);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 1;
+dirLight.shadow.camera.far = 600;
+dirLight.shadow.camera.left = -300;
+dirLight.shadow.camera.right = 300;
+dirLight.shadow.camera.top = 300;
+dirLight.shadow.camera.bottom = -300;
+dirLight.shadow.bias = -0.001;
+scene.add(dirLight);
+
+const hemiLight = new THREE.HemisphereLight(0x88aacc, 0x334422, 0.3);
+scene.add(hemiLight);
+
+// ============================================================
+// 5) GROUND PLANE
+// ============================================================
+const groundSize = 800;
+const groundGeo = new THREE.PlaneGeometry(groundSize, groundSize, 1, 1);
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x1a3a1a,
+  roughness: 0.95,
+  metalness: 0.0
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.1;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Subtle grid on ground
+const gridHelper = new THREE.GridHelper(groundSize, 80, 0x1a4a1a, 0x1a4a1a);
+gridHelper.position.y = -0.05;
+gridHelper.material.opacity = 0.2;
+gridHelper.material.transparent = true;
+scene.add(gridHelper);
+
+// ============================================================
+// 6) PERIMETER OUTLINE
+// ============================================================
+const perimPts = DATA.perimetro_general.vertices.map(v => {
+  const p = toLocal(v.east, v.north);
+  return new THREE.Vector3(p.x, 0.2, p.z);
+});
+perimPts.push(perimPts[0].clone()); // close loop
+
+const perimGeo = new THREE.BufferGeometry().setFromPoints(perimPts);
+const perimMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, opacity: 0.35, transparent: true });
+const perimLine = new THREE.Line(perimGeo, perimMat);
+scene.add(perimLine);
+
+// ============================================================
+// 7) MANZANAS OUTLINES
+// ============================================================
+const mzColors = { Mz29: 0xCE93D8, Mz30: 0x00E676, Mz32: 0xFFFFFF, Mz33: 0xFFEB3B };
+
+DATA.manzanas.forEach(mz => {
+  const pts = mz.corners.map(c => {
+    const p = toLocal(c.east, c.north);
+    return new THREE.Vector3(p.x, 0.3, p.z);
+  });
+  pts.push(pts[0].clone());
+
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineDashedMaterial({
+    color: mzColors[mz.id] || 0xffffff,
+    dashSize: 2,
+    gapSize: 1,
+    opacity: 0.5,
+    transparent: true
+  });
+  const line = new THREE.Line(geo, mat);
+  line.computeLineDistances();
+  scene.add(line);
+
+  // Manzana label at center
+  const cx = pts.slice(0, 4).reduce((s, p) => s + p.x, 0) / 4;
+  const cz = pts.slice(0, 4).reduce((s, p) => s + p.z, 0) / 4;
+  const mzDiv = document.createElement('div');
+  mzDiv.className = 'label-3d';
+  mzDiv.style.fontSize = '11px';
+  mzDiv.style.background = 'rgba(0,0,0,0.3)';
+  mzDiv.style.color = '#' + (mzColors[mz.id] || 0xffffff).toString(16).padStart(6, '0');
+  mzDiv.textContent = mz.id;
+  const mzLabel = new CSS2DObject(mzDiv);
+  mzLabel.position.set(cx, 0.5, cz);
+  scene.add(mzLabel);
+});
+
+// ============================================================
+// 8) STREETS (simple extruded shapes between manzanas)
+// ============================================================
+// We'll create street surfaces based on the alignment data and manzana edges
+// Simple approach: create grey planes at known street locations
+
+function createStreetPlane(cx, cz, width, length, angle) {
+  const geo = new THREE.PlaneGeometry(width, length);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x3a3a3a,
+    roughness: 0.9,
+    metalness: 0.05
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.rotation.z = angle;
+  mesh.position.set(cx, 0.05, cz);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  return mesh;
+}
+
+// Jr. Rioja - between Mz32 and Mz30 (NE-SW diagonal)
+{
+  const p = toLocal(215557.37, 9367172.89);
+  createStreetPlane(p.x, p.z, 27, 120, -0.38);
+}
+
+// Jr. Moyobamba - between Mz33 and Mz35
+{
+  const p = toLocal(215692.2909, 9367230.4503);
+  createStreetPlane(p.x, p.z, 14.5, 100, -0.38);
+}
+
+// Av. Marginal
+{
+  const p = toLocal(215587.946, 9367101.447);
+  createStreetPlane(p.x, p.z, 20, 300, -0.38);
+}
+
+// Street labels
+DATA.calles.forEach(calle => {
+  const p = toLocal(calle.center_utm.east, calle.center_utm.north);
+  const div = document.createElement('div');
+  div.className = 'label-3d';
+  div.style.fontSize = '9px';
+  div.style.background = 'rgba(58,58,58,0.7)';
+  div.style.color = '#aaa';
+  div.textContent = calle.name;
+  const label = new CSS2DObject(div);
+  label.position.set(p.x, 1, p.z);
+  scene.add(label);
+});
+
+// ============================================================
+// 9) SOLARES (3D extruded lots)
+// ============================================================
+const solarMeshes = [];       // Array of mesh references
+const solarDataMap = new Map(); // mesh -> solar data
+
+function createSolarMesh(solar, index) {
+  const pts2D = solar.vertices.map(v => toLocal(v.east, v.north));
+
+  // Compute centroid
+  const cx = pts2D.reduce((s, p) => s + p.x, 0) / pts2D.length;
+  const cz = pts2D.reduce((s, p) => s + p.z, 0) / pts2D.length;
+
+  // Create Shape (local to centroid for better extrusion)
+  const shape = new THREE.Shape();
+  shape.moveTo(pts2D[0].x - cx, pts2D[0].z - cz);
+  for (let i = 1; i < pts2D.length; i++) {
+    shape.lineTo(pts2D[i].x - cx, pts2D[i].z - cz);
+  }
+  shape.closePath();
+
+  const height = solar.default_height_m || 4;
+
+  const extrudeSettings = {
+    depth: height,
+    bevelEnabled: true,
+    bevelThickness: 0.15,
+    bevelSize: 0.1,
+    bevelSegments: 1
+  };
+
+  const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+  // Rotate so extrusion goes up (Y axis)
+  geometry.rotateX(-Math.PI / 2);
+
+  const color = new THREE.Color(solar.color);
+  const material = new THREE.MeshStandardMaterial({
+    color: color,
+    roughness: 0.55,
+    metalness: 0.05,
+    flatShading: false
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(cx, 0, cz);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  // Store metadata
+  mesh.userData = {
+    solarIndex: index,
+    name: solar.name,
+    manzana: solar.manzana,
+    color: solar.color,
+    sides: solar.sides_m,
+    height: height,
+    type: solar.type,
+    centroid: { x: cx, z: cz },
+    vertices2D: pts2D,
+    shapeRef: shape
+  };
+
+  scene.add(mesh);
+  solarMeshes.push(mesh);
+  solarDataMap.set(mesh, solar);
+
+  // 3D Label above solar
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'label-3d';
+  labelDiv.textContent = solar.name;
+  const label = new CSS2DObject(labelDiv);
+  label.position.set(0, height + 2, 0);
+  mesh.add(label);
+  mesh.userData.labelObj = label;
+
+  // Edge outline
+  const edgesGeo = new THREE.EdgesGeometry(geometry, 20);
+  const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.15, transparent: true });
+  const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+  mesh.add(edges);
+  mesh.userData.edgesRef = edges;
+
+  return mesh;
+}
+
+DATA.solares.forEach((solar, i) => createSolarMesh(solar, i));
+
+// ============================================================
+// 10) AREA CALCULATION (Shoelace formula)
+// ============================================================
+function calcArea(vertices) {
+  let area = 0;
+  const n = vertices.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += vertices[i].east * vertices[j].north;
+    area -= vertices[j].east * vertices[i].north;
+  }
+  return Math.abs(area / 2);
+}
+
+function calcPerimeter(sides) {
+  return sides.reduce((s, v) => s + v, 0);
+}
+
+// ============================================================
+// 11) SELECTION & RAYCASTING
+// ============================================================
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedMesh = null;
+
+const panelEl = document.getElementById('panel');
+const solarInfoEl = document.getElementById('solarInfo');
+const emptyStateEl = document.getElementById('emptyState');
+const infoNameEl = document.getElementById('infoName');
+const infoMzEl = document.getElementById('infoMz');
+const infoAreaEl = document.getElementById('infoArea');
+const infoPerimEl = document.getElementById('infoPerim');
+const infoSidesEl = document.getElementById('infoSides');
+const colorPickerEl = document.getElementById('colorPicker');
+const heightSliderEl = document.getElementById('heightSlider');
+const heightValEl = document.getElementById('heightVal');
+const btnDeselectEl = document.getElementById('btnDeselect');
+
+function selectSolar(mesh) {
+  // Deselect previous
+  if (selectedMesh) {
+    selectedMesh.material.emissive.setHex(0x000000);
+    selectedMesh.material.emissiveIntensity = 0;
+    if (selectedMesh.userData.edgesRef) {
+      selectedMesh.userData.edgesRef.material.color.setHex(0x000000);
+      selectedMesh.userData.edgesRef.material.opacity = 0.15;
+    }
+  }
+
+  selectedMesh = mesh;
+
+  if (!mesh) {
+    solarInfoEl.style.display = 'none';
+    emptyStateEl.style.display = 'block';
+    document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+    return;
+  }
+
+  // Highlight
+  mesh.material.emissive.setHex(0xffffff);
+  mesh.material.emissiveIntensity = 0.15;
+  if (mesh.userData.edgesRef) {
+    mesh.userData.edgesRef.material.color.set(0x38bdf8);
+    mesh.userData.edgesRef.material.opacity = 0.8;
+  }
+
+  const solar = solarDataMap.get(mesh);
+  const ud = mesh.userData;
+
+  // Update UI
+  solarInfoEl.style.display = 'block';
+  emptyStateEl.style.display = 'none';
+
+  infoNameEl.textContent = ud.name;
+  infoMzEl.textContent = ud.manzana + (ud.type === 'communal' ? ' · Comunal' : ' · Residencial');
+
+  const area = calcArea(solar.vertices);
+  infoAreaEl.textContent = area.toFixed(1);
+  infoPerimEl.textContent = calcPerimeter(ud.sides).toFixed(1);
+
+  infoSidesEl.innerHTML = '';
+  ud.sides.forEach((s, i) => {
+    const tag = document.createElement('span');
+    tag.className = 'side-tag';
+    tag.textContent = `L${i + 1}: ${s.toFixed(2)}m`;
+    infoSidesEl.appendChild(tag);
+  });
+
+  colorPickerEl.value = ud.color;
+  heightSliderEl.value = ud.height;
+  heightValEl.textContent = ud.height + 'm';
+
+  // Update legend active
+  document.querySelectorAll('.legend-item').forEach((el, i) => {
+    el.classList.toggle('active', i === ud.solarIndex);
+  });
+}
+
+// Click handler
+renderer.domElement.addEventListener('click', (e) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(solarMeshes);
+
+  if (hits.length > 0) {
+    selectSolar(hits[0].object);
+  } else {
+    selectSolar(null);
+  }
+});
+
+// ============================================================
+// 12) COLOR PICKER
+// ============================================================
+colorPickerEl.addEventListener('input', (e) => {
+  if (!selectedMesh) return;
+  const color = e.target.value;
+  selectedMesh.material.color.set(color);
+  selectedMesh.userData.color = color;
+
+  // Update legend dot
+  const idx = selectedMesh.userData.solarIndex;
+  const dot = document.querySelector(`.legend-item[data-idx="${idx}"] .legend-dot`);
+  if (dot) dot.style.background = color;
+});
+
+// ============================================================
+// 13) HEIGHT SLIDER
+// ============================================================
+heightSliderEl.addEventListener('input', (e) => {
+  if (!selectedMesh) return;
+
+  const newHeight = parseFloat(e.target.value);
+  heightValEl.textContent = newHeight + 'm';
+
+  const mesh = selectedMesh;
+  const solar = solarDataMap.get(mesh);
+  const ud = mesh.userData;
+
+  // Recreate geometry with new height
+  const extrudeSettings = {
+    depth: newHeight,
+    bevelEnabled: true,
+    bevelThickness: 0.15,
+    bevelSize: 0.1,
+    bevelSegments: 1
+  };
+
+  const newGeo = new THREE.ExtrudeGeometry(ud.shapeRef, extrudeSettings);
+  newGeo.rotateX(-Math.PI / 2);
+
+  mesh.geometry.dispose();
+  mesh.geometry = newGeo;
+
+  // Rebuild edges
+  if (ud.edgesRef) {
+    mesh.remove(ud.edgesRef);
+    ud.edgesRef.geometry.dispose();
+  }
+  const edgesGeo = new THREE.EdgesGeometry(newGeo, 20);
+  const isSelected = (mesh === selectedMesh);
+  const edgesMat = new THREE.LineBasicMaterial({
+    color: isSelected ? 0x38bdf8 : 0x000000,
+    opacity: isSelected ? 0.8 : 0.15,
+    transparent: true
+  });
+  const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+  mesh.add(edges);
+  ud.edgesRef = edges;
+
+  // Move label
+  if (ud.labelObj) {
+    ud.labelObj.position.set(0, newHeight + 2, 0);
+  }
+
+  ud.height = newHeight;
+});
+
+// ============================================================
+// 14) DESELECT
+// ============================================================
+btnDeselectEl.addEventListener('click', () => selectSolar(null));
+
+// ============================================================
+// 15) LEGEND LIST
+// ============================================================
+const legendListEl = document.getElementById('legendList');
+document.getElementById('solarCount').textContent = DATA.solares.length;
+
+DATA.solares.forEach((solar, i) => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.dataset.idx = i;
+  item.innerHTML = `
+    <span class="legend-dot" style="background:${solar.color}"></span>
+    <span class="legend-name">${solar.name}</span>
+    <span class="legend-mz">${solar.manzana}</span>
+  `;
+  item.addEventListener('click', () => {
+    selectSolar(solarMeshes[i]);
+    // Smooth camera move towards selected solar
+    const ud = solarMeshes[i].userData;
+    controls.target.set(ud.centroid.x, ud.height / 2, ud.centroid.z);
+  });
+  legendListEl.appendChild(item);
+});
+
+// ============================================================
+// 16) KEYBOARD CONTROLS
+// ============================================================
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+function handleKeys() {
+  const speed = 1.5;
+  if (keys['w']) {
+    camera.position.lerp(controls.target, 0.02);
+  }
+  if (keys['s']) {
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    camera.position.add(dir.multiplyScalar(speed));
+  }
+  if (keys['a']) {
+    const angle = 0.015;
+    const pos = camera.position.clone().sub(controls.target);
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const nx = pos.x * cos - pos.z * sin;
+    const nz = pos.x * sin + pos.z * cos;
+    camera.position.set(nx + controls.target.x, camera.position.y, nz + controls.target.z);
+  }
+  if (keys['d']) {
+    const angle = -0.015;
+    const pos = camera.position.clone().sub(controls.target);
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const nx = pos.x * cos - pos.z * sin;
+    const nz = pos.x * sin + pos.z * cos;
+    camera.position.set(nx + controls.target.x, camera.position.y, nz + controls.target.z);
+  }
+}
+
+// ============================================================
+// 17) RESIZE HANDLER
+// ============================================================
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ============================================================
+// 18) ANIMATION LOOP
+// ============================================================
+function animate() {
+  requestAnimationFrame(animate);
+  handleKeys();
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+
+animate();
+
+// ============================================================
+// 19) INITIAL CAMERA POSITION
+// ============================================================
+camera.position.set(50, 200, 220);
+controls.target.set(30, 0, -20);
+controls.update();
+
+console.log('✅ Barrio Dinamarca 3D loaded —', DATA.solares.length, 'solares');
+</script>
+</body>
+</html>
